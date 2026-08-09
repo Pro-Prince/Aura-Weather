@@ -88,7 +88,7 @@ Native app installation requires app store fees, review delays, and platform-spe
 
 ## Author
 
-**Prince Patel** — Developer
+**Prince Patel** — AI-Powered Product Developer
 
 - 🌐 Portfolio: [prince-patel-portfolio.vercel.app](https://prince-patel-portfolio.vercel.app)
 - 🐙 GitHub: [github.com/Pro-Prince](https://github.com/Pro-Prince)
