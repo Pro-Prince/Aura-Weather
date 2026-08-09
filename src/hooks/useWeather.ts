@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface WeatherData {
   current: any;
@@ -19,6 +19,12 @@ export function useWeather(coordinates: { lat: number; lon: number } | null) {
     loading: true,
     error: null,
   });
+  
+  const [retryCount, setRetryCount] = useState(0);
+
+  const retry = useCallback(() => {
+    setRetryCount(c => c + 1);
+  }, []);
 
   useEffect(() => {
     if (!coordinates) return;
@@ -76,7 +82,7 @@ export function useWeather(coordinates: { lat: number; lon: number } | null) {
     return () => {
       isMounted = false;
     };
-  }, [coordinates]);
+  }, [coordinates, retryCount]);
 
-  return state;
+  return { ...state, retry };
 }
