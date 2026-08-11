@@ -30,8 +30,9 @@ export function CurrentWeather({ data, locationName, unit }: CurrentWeatherProps
   const codeDetails = getWeatherCodeDetails(current.current?.weather_code ?? current.weather_code);
   const WeatherIcon = codeDetails.Icon;
 
+  const currentTimeStr = current.current?.time ?? current.time;
   const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric' };
-  const dateStr = new Date().toLocaleDateString(undefined, dateOptions);
+  const dateStr = currentTimeStr ? new Date(currentTimeStr).toLocaleDateString(undefined, dateOptions) : new Date().toLocaleDateString(undefined, dateOptions);
 
   return (
     <div className="flex flex-col items-center justify-center space-y-6 w-full">

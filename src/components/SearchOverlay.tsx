@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, X, MapPin, Clock } from 'lucide-react';
+import { Search, X, MapPin, Clock, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
 import { GlassCard } from './GlassCard';
 
@@ -14,6 +14,8 @@ interface SearchOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectLocation: (location: LocationData) => void;
+  onSaveLocation: (location: LocationData) => void;
+  isSaved: (name: string) => boolean;
 }
 
 interface SearchResult {
@@ -25,7 +27,7 @@ interface SearchResult {
   longitude: number;
 }
 
-export function SearchOverlay({ isOpen, onClose, onSelectLocation }: SearchOverlayProps) {
+export function SearchOverlay({ isOpen, onClose, onSelectLocation, onSaveLocation, isSaved }: SearchOverlayProps) {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 400);
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -110,7 +112,7 @@ export function SearchOverlay({ isOpen, onClose, onSelectLocation }: SearchOverl
               onChange={(e) => setQuery(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-10 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all"
             />
-            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={onClose} className="absolute right-3 p-1 rounded-full hover:bg-white/10 transition-colors">
+            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={onClose} aria-label="Close search" className="absolute right-3 p-1 rounded-full hover:bg-white/10 transition-colors">
               <X className="w-5 h-5 text-slate-400 hover:text-slate-200" />
             </motion.button>
           </div>
@@ -160,13 +162,15 @@ export function SearchOverlay({ isOpen, onClose, onSelectLocation }: SearchOverl
 
             {!loading && !error && results.length > 0 && (
               <ul className="flex flex-col space-y-1">
-                {results.map((result) => (
-                  <li key={result.id}>
+                {results.map((result) => {
+                  const saved = isSaved(result.name);
+                  return (
+                  <li key={result.id} className="flex items-center">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleSelect(result.latitude, result.longitude, result.name)}
-                      className="w-full flex items-center text-left p-3 rounded-xl hover:bg-white/5 transition-colors"
+                      className="flex-1 flex items-center text-left p-3 rounded-xl hover:bg-white/5 transition-colors"
                     >
                       <MapPin className="w-4 h-4 mr-3 text-slate-400 shrink-0" />
                       <div className="flex flex-col overflow-hidden">
@@ -176,8 +180,25 @@ export function SearchOverlay({ isOpen, onClose, onSelectLocation }: SearchOverl
                         </span>
                       </div>
                     </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSaveLocation({ lat: result.latitude, lon: result.longitude, name: result.name });
+                      }}
+                      className="p-3 mr-1 hover:bg-white/10 rounded-full transition-colors"
+                      aria-label={saved ? "Remove city" : "Save this city"}
+                      title={saved ? "Remove city" : "Save this city"}
+                    >
+                      {saved ? (
+                        <BookmarkCheck className="w-5 h-5 text-sky-400" />
+                      ) : (
+                        <Bookmark className="w-5 h-5 text-slate-400 hover:text-slate-200" />
+                      )}
+                    </motion.button>
                   </li>
-                ))}
+                )})}
               </ul>
             )}
           </div>

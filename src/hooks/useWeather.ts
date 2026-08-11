@@ -13,7 +13,7 @@ interface WeatherState {
   error: string | null;
 }
 
-export function useWeather(coordinates: { lat: number; lon: number } | null) {
+export function useWeather(coordinates: { lat: number; lon: number } | null, skip: boolean = false) {
   const [state, setState] = useState<WeatherState>({
     data: null,
     loading: true,
@@ -27,7 +27,7 @@ export function useWeather(coordinates: { lat: number; lon: number } | null) {
   }, []);
 
   useEffect(() => {
-    if (!coordinates) return;
+    if (!coordinates || skip) return;
 
     let isMounted = true;
     setState(prev => ({ ...prev, loading: true, error: null }));
@@ -41,6 +41,7 @@ export function useWeather(coordinates: { lat: number; lon: number } | null) {
           current: 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,uv_index',
           hourly: 'temperature_2m,precipitation_probability,weather_code',
           daily: 'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max',
+          minutely_15: 'precipitation',
           timezone: 'auto'
         });
 
