@@ -38,17 +38,18 @@ export function useWeather(coordinates: { lat: number; lon: number } | null, ski
         const weatherParams = new URLSearchParams({
           latitude: lat.toString(),
           longitude: lon.toString(),
-          current: 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,uv_index',
+          current: 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,uv_index,surface_pressure,visibility,cloud_cover',
           hourly: 'temperature_2m,precipitation_probability,weather_code',
-          daily: 'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max',
+          daily: 'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,moonrise,moonset',
           minutely_15: 'precipitation',
+          past_days: '1',
           timezone: 'auto'
         });
 
         const aqiParams = new URLSearchParams({
           latitude: lat.toString(),
           longitude: lon.toString(),
-          current: 'us_aqi,pm2_5',
+          current: 'us_aqi,pm2_5,pm10,sulphur_dioxide,carbon_monoxide',
           timezone: 'auto'
         });
 

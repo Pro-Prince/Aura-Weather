@@ -32,7 +32,20 @@ export function useSavedCities() {
     });
   };
 
+  const removeCities = (names: string[]) => {
+    setSavedCities(prev => {
+      const updated = prev.filter(c => !names.includes(c.name));
+      localStorage.setItem('aura-saved-cities', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const reorderCities = (newCities: LocationData[]) => {
+    setSavedCities(newCities);
+    localStorage.setItem('aura-saved-cities', JSON.stringify(newCities));
+  };
+
   const isSaved = (name: string) => savedCities.some(c => c.name === name);
 
-  return { savedCities, addCity, removeCity, isSaved };
+  return { savedCities, addCity, removeCity, removeCities, reorderCities, isSaved };
 }

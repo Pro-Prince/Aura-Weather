@@ -3,14 +3,21 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { MapPinOff, RefreshCw } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { CurrentWeather } from './CurrentWeather';
-import { HourlyForecast } from './HourlyForecast';
-import { DayStrip } from './DayStrip';
-import { DailyForecast } from './DailyForecast';
-import { AQIUVRow } from './AQIUVRow';
+import { ForecastSection } from './ForecastSection';
+import { AQICard } from './AQICard';
+import { SunArcCard } from './SunArcCard';
 import { Nowcast } from './Nowcast';
 import { AlertBanner } from './AlertBanner';
+import { FeelsLikeCard } from './FeelsLikeCard';
+import { WindCard } from './WindCard';
+import { HumidityCard } from './HumidityCard';
+import { UVCard } from './UVCard';
+import { VisibilityCard } from './VisibilityCard';
+import { PressureCard } from './PressureCard';
+import { LifeIndexGrid } from './LifeIndexGrid';
 import { useWeather } from '../hooks/useWeather';
 import { TempUnit } from '../utils/convertTemp';
+import { getBackgroundImage } from '../utils/getBackgroundImage';
 import { HeroSkeleton, AQIUVSkeleton, HourlySkeleton, DailySkeleton } from './SkeletonLoaders';
 
 interface WeatherPageProps {
@@ -128,12 +135,27 @@ export function WeatherPage({
 
   const showAlert = alertMessage && eventId && eventId !== dismissedEventId;
 
+  const bgImage = displayState.data ? getBackgroundImage(displayState.data.current?.weather_code ?? 0, displayState.data.current?.is_day ?? 1) : null;
+
   return (
-    <div className="w-full shrink-0 snap-center px-4 sm:px-6 md:px-8 pb-8 flex flex-col items-center">
-      <div className="w-full max-w-md md:max-w-xl lg:max-w-2xl flex flex-col space-y-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={displayState.name || 'loading'}
+    <div className="w-full h-full shrink-0 snap-center relative overflow-hidden">
+      {/* Dynamic Background for this page */}
+      {bgImage && (
+        <img 
+          src={bgImage}
+          alt="Weather Background"
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover -z-20" 
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/70 pointer-events-none -z-10" />
+
+      {/* Scrollable Content */}
+      <div className="w-full h-full overflow-y-auto px-4 sm:px-6 md:px-8 pb-8 pt-24 flex flex-col items-center hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="w-full max-w-md md:max-w-xl lg:max-w-2xl flex flex-col space-y-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={displayState.name || 'loading'}
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -188,6 +210,17 @@ export function WeatherPage({
               </motion.div>
             ) : !displayState.data ? (
               <>
+                <motion.div variants={itemVariants} className="flex flex-col items-center justify-center py-4 space-y-3">
+                  <motion.img
+                    src="/logo/weather_logo.png"
+                    alt="Aura Weather"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl shadow-2xl shadow-sky-500/20 border border-white/20"
+                    animate={{ scale: [0.96, 1.04, 0.96], opacity: [0.85, 1, 0.85] }}
+                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                    referrerPolicy="no-referrer"
+                  />
+                  <h2 className="text-xl font-light tracking-wide text-slate-100">Aura Weather</h2>
+                </motion.div>
                 <motion.div variants={itemVariants}><HeroSkeleton /></motion.div>
                 <motion.div variants={itemVariants}><AQIUVSkeleton /></motion.div>
                 <motion.div variants={itemVariants}><HourlySkeleton /></motion.div>
@@ -195,33 +228,58 @@ export function WeatherPage({
               </>
             ) : (
               <>
+                <motion.div variants={itemVariants}>
+                  <CurrentWeather data={displayState.data} unit={unit} />
+                </motion.div>
                 {showAlert && alertMessage && eventId && (
-                  <motion.div variants={itemVariants}>
+                  <motion.div variants={itemVariants} className="flex justify-center -mt-4 mb-4 z-10">
                     <AlertBanner message={alertMessage} onDismiss={() => setDismissedEventId(eventId)} />
                   </motion.div>
                 )}
                 <motion.div variants={itemVariants}>
-                  <CurrentWeather data={displayState.data} locationName={displayState.name} unit={unit} />
-                </motion.div>
-                <motion.div variants={itemVariants}>
                   <Nowcast data={displayState.data} />
                 </motion.div>
                 <motion.div variants={itemVariants}>
-                  <AQIUVRow data={displayState.data} />
+                  <AQICard data={displayState.data.air_quality} />
                 </motion.div>
                 <motion.div variants={itemVariants}>
-                  <DayStrip data={displayState.data} unit={unit} />
+                  <SunArcCard data={displayState.data} />
                 </motion.div>
                 <motion.div variants={itemVariants}>
-                  <HourlyForecast data={displayState.data} unit={unit} />
+                  <ForecastSection data={displayState.data} unit={unit} />
+                </motion.div>
+                <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
+                  <FeelsLikeCard 
+                    currentApparentTempC={displayState.data.current?.apparent_temperature ?? 0} 
+                    unit={unit} 
+                  />
+                  <WindCard 
+                    windSpeedKmH={displayState.data.current?.wind_speed_10m ?? 0} 
+                    windDirectionDeg={displayState.data.current?.wind_direction_10m ?? 0} 
+                  />
+                </motion.div>
+                <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
+                  <HumidityCard 
+                    humidity={displayState.data.current?.relative_humidity_2m ?? 0} 
+                  />
+                  <UVCard 
+                    uvIndex={displayState.data.current?.uv_index ?? 0} 
+                  />
+                  <VisibilityCard 
+                    visibilityMeters={displayState.data.current?.visibility ?? 0} 
+                  />
+                  <PressureCard 
+                    pressureHpa={displayState.data.current?.surface_pressure ?? 1013} 
+                  />
                 </motion.div>
                 <motion.div variants={itemVariants}>
-                  <DailyForecast data={displayState.data} unit={unit} />
+                  <LifeIndexGrid data={displayState.data} />
                 </motion.div>
               </>
             )}
           </motion.div>
         </AnimatePresence>
+      </div>
       </div>
     </div>
   );

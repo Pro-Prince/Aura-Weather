@@ -46,9 +46,12 @@ export function InstallPrompt() {
           className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:w-96"
         >
           <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center space-x-4">
-            <div className="bg-sky-500/20 p-2 rounded-xl text-sky-400">
-              <Download className="w-6 h-6" />
-            </div>
+            <img 
+              src="/logo/weather_logo.png" 
+              alt="Aura Weather Logo" 
+              className="w-10 h-10 rounded-xl object-cover border border-white/10 shrink-0 shadow-md"
+              referrerPolicy="no-referrer"
+            />
             <div className="flex-1">
               <h3 className="text-slate-100 font-medium">Install Aura</h3>
               <p className="text-slate-400 text-sm">Add to home screen for offline access</p>
