@@ -35,6 +35,11 @@ export default defineConfig(() => {
               type: 'image/png',
               purpose: 'maskable',
             },
+            {
+              src: '/logo/weather_logo.png',
+              sizes: '512x512',
+              type: 'image/png',
+            },
           ],
         },
         workbox: {

@@ -1,49 +1,21 @@
 import sharp from 'sharp';
 import fs from 'fs';
 
-const svgCode = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#0f172a"/>
-  <!-- Sun and cloud icon stylized -->
-  <path d="M256 128 V96 M256 416 V384 M128 256 H96 M416 256 H384 M165.5 165.5 L142.8 142.8 M346.5 346.5 L369.2 369.2 M165.5 346.5 L142.8 369.2 M346.5 165.5 L369.2 142.8" stroke="#38bdf8" stroke-width="24" stroke-linecap="round"/>
-  <circle cx="256" cy="256" r="64" fill="#38bdf8"/>
-  <path d="M200 320 Q200 280 240 280 Q245 230 290 230 Q335 230 340 280 Q380 280 380 320 Z" fill="#e2e8f0"/>
-</svg>
-`;
-
-// Maskable variant needs a bit more padding since it's going to be clipped
-const svgMaskableCode = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#0f172a"/>
-  <!-- Scaled down to ensure it fits in the safe zone -->
-  <g transform="translate(102.4, 102.4) scale(0.6)">
-    <path d="M256 128 V96 M256 416 V384 M128 256 H96 M416 256 H384 M165.5 165.5 L142.8 142.8 M346.5 346.5 L369.2 369.2 M165.5 346.5 L142.8 369.2 M346.5 165.5 L369.2 142.8" stroke="#38bdf8" stroke-width="24" stroke-linecap="round"/>
-    <circle cx="256" cy="256" r="64" fill="#38bdf8"/>
-    <path d="M200 320 Q200 280 240 280 Q245 230 290 230 Q335 230 340 280 Q380 280 380 320 Z" fill="#e2e8f0"/>
-  </g>
-</svg>
-`;
-
 async function generate() {
-  const buf = Buffer.from(svgCode);
-  const bufMaskable = Buffer.from(svgMaskableCode);
+  const logoPath = fs.existsSync('weather_logo.png') ? 'weather_logo.png' : 'public/logo/weather_logo.png';
+  if (!fs.existsSync(logoPath)) {
+    console.error('Logo file not found');
+    return;
+  }
   
-  await sharp(buf)
-    .resize(192, 192)
-    .png()
-    .toFile('public/icon-192x192.png');
+  await sharp(logoPath).resize(192, 192).png().toFile('public/icon-192x192.png');
+  await sharp(logoPath).resize(512, 512).png().toFile('public/icon-512x512.png');
+  await sharp(logoPath).resize(512, 512).png().toFile('public/icon-maskable-512x512.png');
+  await sharp(logoPath).resize(16, 16).png().toFile('public/favicon-16x16.png');
+  await sharp(logoPath).resize(32, 32).png().toFile('public/favicon-32x32.png');
+  await sharp(logoPath).resize(64, 64).png().toFile('public/favicon.ico');
     
-  await sharp(buf)
-    .resize(512, 512)
-    .png()
-    .toFile('public/icon-512x512.png');
-
-  await sharp(bufMaskable)
-    .resize(512, 512)
-    .png()
-    .toFile('public/icon-maskable-512x512.png');
-    
-  console.log('Icons generated');
+  console.log('Icons generated from weather_logo.png');
 }
 
 generate().catch(console.error);
