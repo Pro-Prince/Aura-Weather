@@ -17,6 +17,9 @@ import { PressureCard } from './PressureCard';
 import { LifeIndexGrid } from './LifeIndexGrid';
 import { useWeather } from '../hooks/useWeather';
 import { TempUnit } from '../utils/convertTemp';
+import { WeatherCanvas } from './WeatherCanvas';
+import { SkyBackground } from './SkyBackground';
+import { getWeatherVisualState } from '../utils/getWeatherVisualState';
 import { HeroSkeleton, AQIUVSkeleton, HourlySkeleton, DailySkeleton } from './SkeletonLoaders';
 
 interface WeatherPageProps {
@@ -134,10 +137,13 @@ export function WeatherPage({
 
   const showAlert = alertMessage && eventId && eventId !== dismissedEventId;
 
+  const visualState = React.useMemo(() => getWeatherVisualState(displayState.data?.current, displayState.data?.daily), [displayState.data?.current, displayState.data?.daily]);
+
 
   return (
     <div className="w-full h-full shrink-0 snap-center relative overflow-hidden">
-
+      <SkyBackground visualState={visualState} />
+      <WeatherCanvas visualState={visualState} />
       <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/70 pointer-events-none -z-10" />
 
       {/* Scrollable Content */}

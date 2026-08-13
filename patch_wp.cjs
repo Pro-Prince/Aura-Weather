@@ -1,19 +1,22 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/components/WeatherPage.tsx', 'utf8');
 
-// Remove import
-code = code.replace("import { getBackgroundImage } from '../utils/getBackgroundImage';\n", "");
-
-// Remove logic 
+// Add imports
 code = code.replace(
-  "  const bgImage = displayState.data ? getBackgroundImage(displayState.data.current?.weather_code ?? 0, displayState.data.current?.is_day ?? 1) : null;\n",
-  ""
+  "import { TempUnit } from '../utils/convertTemp';",
+  "import { TempUnit } from '../utils/convertTemp';\nimport { WeatherCanvas } from './WeatherCanvas';\nimport { SkyBackground } from './SkyBackground';\nimport { getWeatherVisualState } from '../utils/getWeatherVisualState';"
 );
 
-// Remove image tag
+// Get visual state
 code = code.replace(
-  /      \{\/\* Dynamic Background for this page \*\/\}\n      \{bgImage && \([\s\S]*?      \)\}/,
-  ""
+  "  const showAlert = alertMessage && eventId && eventId !== dismissedEventId;",
+  "  const showAlert = alertMessage && eventId && eventId !== dismissedEventId;\n\n  const visualState = React.useMemo(() => getWeatherVisualState(displayState.data?.current, displayState.data?.daily), [displayState.data?.current, displayState.data?.daily]);"
+);
+
+// Add components
+code = code.replace(
+  '<div className="w-full h-full shrink-0 snap-center relative overflow-hidden">\n      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/70 pointer-events-none -z-10" />',
+  '<div className="w-full h-full shrink-0 snap-center relative overflow-hidden">\n      <SkyBackground visualState={visualState} />\n      <WeatherCanvas visualState={visualState} />\n      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/70 pointer-events-none -z-10" />'
 );
 
 fs.writeFileSync('src/components/WeatherPage.tsx', code);

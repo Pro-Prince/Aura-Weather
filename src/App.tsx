@@ -12,7 +12,6 @@ import { useSavedCities } from './hooks/useSavedCities';
 import { TempUnit } from './utils/convertTemp';
 import { InstallPrompt } from './components/InstallPrompt';
 import { CityManagement } from './components/CityManagement';
-import { WeatherCanvas } from './components/WeatherCanvas';
 import { LocationData } from './components/SearchOverlay';
 
 export default function App() {
@@ -83,8 +82,7 @@ export default function App() {
   const isCurrentSaved = currentPage && !currentPage.isGeo && isSaved(currentPage.location.name!);
 
   return (
-    <div className="h-screen w-full flex flex-col text-slate-100 overflow-hidden relative bg-black">
-      <WeatherCanvas />
+    <div className="h-screen w-full flex flex-col text-slate-100 overflow-hidden relative bg-transparent">
       {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 p-4 sm:p-6 md:p-8 z-30 w-full max-w-md md:max-w-xl lg:max-w-2xl mx-auto pointer-events-none">
         <div className="flex items-center justify-between pointer-events-auto">

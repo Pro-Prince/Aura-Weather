@@ -18,3 +18,24 @@
     scrollbar-width: none;
   }
 }
+@keyframes floatRight {
+  0% { transform: translateX(-50vw); }
+  100% { transform: translateX(150vw); }
+}
+
+.animate-cloud-slow {
+  animation: floatRight 80s linear infinite;
+}
+.animate-cloud-med {
+  animation: floatRight 55s linear infinite;
+}
+.animate-cloud-fast {
+  animation: floatRight 35s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-cloud-slow, .animate-cloud-med, .animate-cloud-fast {
+    animation: none !important;
+    transform: translateX(50vw) !important;
+  }
+}
