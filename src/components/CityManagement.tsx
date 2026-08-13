@@ -3,7 +3,6 @@ import { ArrowLeft, Search, MapPin, X, Plus, Edit2, Check, GripVertical, Trash2,
 import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react';
 import { LocationData } from './SearchOverlay';
 import { useWeather } from '../hooks/useWeather';
-import { getBackgroundImage } from '../utils/getBackgroundImage';
 import { getWeatherCodeDetails } from '../utils/weatherCodeMap';
 import { TempUnit, convertTemp } from '../utils/convertTemp';
 import { useDebounce } from '../hooks/useDebounce';
@@ -71,7 +70,6 @@ function CityCard({
 }) {
   const { data, loading } = useWeather(location);
   
-  const bgImage = data ? getBackgroundImage(data.current?.weather_code ?? 0, data.current?.is_day ?? 1) : null;
   const temp = data ? convertTemp(data.current?.temperature_2m ?? 0, unit) : '--';
   const minTemp = data ? convertTemp(data.daily?.temperature_2m_min?.[0] ?? 0, unit) : '--';
   const maxTemp = data ? convertTemp(data.daily?.temperature_2m_max?.[0] ?? 0, unit) : '--';
@@ -92,14 +90,7 @@ function CityCard({
         className={`w-full relative h-32 rounded-3xl overflow-hidden flex items-center justify-between text-left shadow-xl border border-white/10 ${isEditMode && !isGeo ? 'pl-16 pr-14' : 'px-6'}`}
       >
         <div className="absolute inset-0 bg-slate-900 -z-20" />
-        {bgImage && (
-          <img 
-            src={bgImage} 
-            alt="background"
-            loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover -z-10 opacity-70 group-hover:scale-105 transition-transform duration-700"
-          />
-        )}
+
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-black/70 -z-10" />
         
         {isEditMode && !isGeo && (

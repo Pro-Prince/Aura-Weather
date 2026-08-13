@@ -47,7 +47,7 @@ export function InstallPrompt() {
         >
           <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center space-x-4">
             <img 
-              src="/logo/weather_logo.png" 
+              src="/weather_logo.png" 
               alt="Aura Weather Logo" 
               className="w-10 h-10 rounded-xl object-cover border border-white/10 shrink-0 shadow-md"
               referrerPolicy="no-referrer"

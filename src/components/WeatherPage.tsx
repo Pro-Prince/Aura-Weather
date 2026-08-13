@@ -17,7 +17,6 @@ import { PressureCard } from './PressureCard';
 import { LifeIndexGrid } from './LifeIndexGrid';
 import { useWeather } from '../hooks/useWeather';
 import { TempUnit } from '../utils/convertTemp';
-import { getBackgroundImage } from '../utils/getBackgroundImage';
 import { HeroSkeleton, AQIUVSkeleton, HourlySkeleton, DailySkeleton } from './SkeletonLoaders';
 
 interface WeatherPageProps {
@@ -135,19 +134,10 @@ export function WeatherPage({
 
   const showAlert = alertMessage && eventId && eventId !== dismissedEventId;
 
-  const bgImage = displayState.data ? getBackgroundImage(displayState.data.current?.weather_code ?? 0, displayState.data.current?.is_day ?? 1) : null;
 
   return (
     <div className="w-full h-full shrink-0 snap-center relative overflow-hidden">
-      {/* Dynamic Background for this page */}
-      {bgImage && (
-        <img 
-          src={bgImage}
-          alt="Weather Background"
-          loading="lazy"
-          className="absolute inset-0 w-full h-full object-cover -z-20" 
-        />
-      )}
+
       <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/70 pointer-events-none -z-10" />
 
       {/* Scrollable Content */}
@@ -212,7 +202,7 @@ export function WeatherPage({
               <>
                 <motion.div variants={itemVariants} className="flex flex-col items-center justify-center py-4 space-y-3">
                   <motion.img
-                    src="/logo/weather_logo.png"
+                    src="/weather_logo.png"
                     alt="Aura Weather"
                     className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl shadow-2xl shadow-sky-500/20 border border-white/20"
                     animate={{ scale: [0.96, 1.04, 0.96], opacity: [0.85, 1, 0.85] }}
