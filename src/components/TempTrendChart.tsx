@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface TempTrendChartProps {
   data: { temp: number }[];
@@ -7,6 +7,11 @@ interface TempTrendChartProps {
 }
 
 export function TempTrendChart({ data, columnWidth, height }: TempTrendChartProps) {
+  const uniqueId = useId().replace(/:/g, '_');
+  const gradientId = `tempGrad_${uniqueId}`;
+  const solidClipId = `solidClip_${uniqueId}`;
+  const dashedClipId = `dashedClip_${uniqueId}`;
+
   if (!data || data.length === 0) return null;
 
   const minTemp = Math.min(...data.map(d => d.temp));
@@ -15,7 +20,7 @@ export function TempTrendChart({ data, columnWidth, height }: TempTrendChartProp
   // Prevent division by zero
   const tempRange = Math.max(maxTemp - minTemp, 1);
   
-  const paddingY = 15;
+  const paddingY = 16;
   const availableHeight = height - paddingY * 2;
 
   // Map temp to Y coordinate (higher temp = lower Y)
@@ -48,22 +53,23 @@ export function TempTrendChart({ data, columnWidth, height }: TempTrendChartProp
   };
 
   const fullPath = createPath(points);
+  const currentTemp = points.length > 0 ? points[0].temp : null;
 
   return (
-    <div className="absolute top-0 left-0" style={{ width: data.length * columnWidth, height }}>
+    <div className="absolute top-0 left-0 pointer-events-none" style={{ width: data.length * columnWidth, height }}>
       <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
         <defs>
-          <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#fca5a5" /> {/* Red-ish for hot */}
-            <stop offset="50%" stopColor="#fde047" /> {/* Yellow for medium */}
-            <stop offset="100%" stopColor="#67e8f9" /> {/* Cyan for cold */}
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fca5a5" /> {/* Warm tone */}
+            <stop offset="50%" stopColor="#fde047" /> {/* Mild tone */}
+            <stop offset="100%" stopColor="#67e8f9" /> {/* Cool tone */}
           </linearGradient>
           
-          <clipPath id="solidClip">
+          <clipPath id={solidClipId}>
             {/* The "Now" marker is at columnWidth / 2 */}
             <rect x="0" y="0" width={columnWidth / 2} height="100%" />
           </clipPath>
-          <clipPath id="dashedClip">
+          <clipPath id={dashedClipId}>
             <rect x={columnWidth / 2} y="0" width="100%" height="100%" />
           </clipPath>
         </defs>
@@ -72,31 +78,51 @@ export function TempTrendChart({ data, columnWidth, height }: TempTrendChartProp
         <path
           d={fullPath}
           fill="none"
-          stroke="url(#tempGradient)"
+          stroke={`url(#${gradientId})`}
           strokeWidth="3"
           strokeDasharray="6 6"
-          clipPath="url(#dashedClip)"
+          clipPath={`url(#${dashedClipId})`}
         />
 
         {/* Solid line for elapsed hours (up to Now marker) */}
         <path
           d={fullPath}
           fill="none"
-          stroke="url(#tempGradient)"
+          stroke={`url(#${gradientId})`}
           strokeWidth="3"
-          clipPath="url(#solidClip)"
+          clipPath={`url(#${solidClipId})`}
         />
 
-        {/* Now Marker */}
-        {points.length > 0 && (
+        {/* Current-Value Marker: Single clean node updating in place */}
+        {points.length > 0 && currentTemp !== null && (
           <g transform={`translate(${points[0].x}, ${points[0].y})`}>
             {/* Dashed vertical line down from marker */}
-            <line x1="0" y1="0" x2="0" y2={height - points[0].y} stroke="rgba(255,255,255,0.4)" strokeWidth="1" strokeDasharray="4 4" />
+            <line 
+              x1="0" 
+              y1="0" 
+              x2="0" 
+              y2={height - points[0].y} 
+              stroke="rgba(255,255,255,0.4)" 
+              strokeWidth="1" 
+              strokeDasharray="4 4" 
+            />
             
-            <circle r="12" fill="white" />
-            <circle r="4" fill="#10b981" /> {/* Green inner dot */}
-            <text x="0" y="4" textAnchor="middle" fill="#0f172a" fontSize="11" fontWeight="bold">
-              {Math.round(points[0].temp)}
+            {/* Marker Circle */}
+            <circle r="13" fill="#ffffff" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
+            
+            {/* Single text element */}
+            <text 
+              x="0" 
+              y="0" 
+              textAnchor="middle" 
+              dominantBaseline="central"
+              fill="#0f172a" 
+              fontSize="11" 
+              fontWeight="700" 
+              fontFamily="'Space Grotesk', sans-serif"
+              style={{ fontVariantNumeric: 'tabular-nums' }}
+            >
+              {Math.round(currentTemp)}
             </text>
           </g>
         )}

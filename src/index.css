@@ -1,12 +1,135 @@
 @import "tailwindcss";
 @custom-variant dark (&:is(.dark *));
+
 @theme {
   --color-slate-900: #0f172a;
+  
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-numeric: "Space Grotesk", sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  
+  /* Color Tokens */
+  --color-surface-base: rgba(0, 0, 0, 0.3);
+  --color-surface-elevated: rgba(255, 255, 255, 0.1);
+  --color-surface-glass: rgba(255, 255, 255, 0.05);
+  --color-border-token: rgba(255, 255, 255, 0.1);
+  
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(226, 232, 240, 0.7);
+  --color-text-muted: rgba(148, 163, 184, 0.7);
+  
+  --color-accent-warm: #f59e0b;
+  --color-accent-cool: #38bdf8;
+  --color-status-success: #34d399;
+  --color-status-warning: #fbbf24;
+  --color-status-danger: #f87171;
+
+  /* Radius Tokens */
+  --radius-card: 1rem;      /* 16px - Medium for cards */
+  --radius-pill: 9999px;    /* Pills/Chips */
+  --radius-chip: 0.75rem;   /* 12px - Buttons/Inputs */
 }
+
 @layer base {
-  body {
-    @apply bg-slate-950 text-slate-100;
+  html {
+    scroll-behavior: smooth;
   }
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased;
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* =========================================================================
+   TYPOGRAPHY SYSTEM
+   1. Space Grotesk: Exclusively for numeric display & measurements (tabular-nums)
+   2. Inter: Exclusively for body, labels, headers, city names, condition text
+   ========================================================================= */
+
+.font-numeric {
+  font-family: "Space Grotesk", sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Unified Type Scale Tokens */
+.type-hero {
+  font-family: "Space Grotesk", sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+.type-city-title {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.type-section-header {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.type-card-title {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.type-stat-lg {
+  font-family: "Space Grotesk", sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.type-stat {
+  font-family: "Space Grotesk", sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.type-body {
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+.type-body-medium {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+.type-caption {
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+
+.type-eyebrow {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 @layer utilities {
@@ -18,6 +141,7 @@
     scrollbar-width: none;
   }
 }
+
 @keyframes floatRight {
   0% { transform: translateX(-50vw); }
   100% { transform: translateX(150vw); }
@@ -39,3 +163,35 @@
     transform: translateX(50vw) !important;
   }
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .app-card-hover {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: transform;
+    transition: transform 300ms cubic-bezier(0.25, 1, 0.5, 1), background-color 300ms cubic-bezier(0.25, 1, 0.5, 1), border-color 300ms cubic-bezier(0.25, 1, 0.5, 1), box-shadow 300ms cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .app-card-hover:hover {
+    transform: translateY(-3px);
+    background-color: rgba(15, 23, 42, 0.65);
+    border-color: rgba(255, 255, 255, 0.24);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .app-row-hover {
+    transition: background-color 220ms cubic-bezier(0.25, 1, 0.5, 1), border-color 220ms cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .app-row-hover:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @media (hover: hover) and (pointer: fine) {
+    .app-card-hover:hover {
+      transform: none !important;
+    }
+  }
+}
+
+

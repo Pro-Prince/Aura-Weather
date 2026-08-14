@@ -47,7 +47,7 @@ export function DailyForecast({ data, unit, isExpanded = true }: DailyForecastPr
   };
 
   return (
-    <div className="flex flex-col w-full px-4 pb-4 transition-all duration-300">
+    <div className="flex flex-col w-full px-2 sm:px-4 pb-2 sm:pb-4 transition-all duration-300">
       {visibleDays.map((timeStr: string, idx: number) => {
         const dateFormatted = formatDate(timeStr);
         const dayLabel = getDayLabel(timeStr, idx);
@@ -55,28 +55,28 @@ export function DailyForecast({ data, unit, isExpanded = true }: DailyForecastPr
         const code = daily.weather_code[idx];
         const min = Math.round(convertTemp(daily.temperature_2m_min[idx], unit));
         const max = Math.round(convertTemp(daily.temperature_2m_max[idx], unit));
-        const precip = daily.precipitation_probability_max?.[idx] || 0;
+        const precip = Math.round(daily.precipitation_probability_max?.[idx] || 0);
         const { Icon } = getWeatherCodeDetails(code);
 
         return (
-          <div key={idx} className="flex items-center justify-between py-3">
+          <div key={idx} className="flex items-center justify-between py-3 px-2 rounded-xl app-row-hover">
             <div className="flex items-center space-x-3 w-32">
-              <span className="text-sm font-medium text-slate-400 w-10">{dateFormatted}</span>
-              <span className="text-sm font-medium text-slate-200">{dayLabel}</span>
+              <span className="type-stat text-sm text-slate-400 w-10">{dateFormatted}</span>
+              <span className="type-card-title text-sm text-slate-200">{dayLabel}</span>
             </div>
             
             <div className="flex items-center space-x-2 flex-1 justify-center">
               <Icon className="w-5 h-5 text-white drop-shadow-sm" strokeWidth={1.5} />
               {precip > 0 ? (
-                <span className="text-xs font-medium text-slate-300 w-8">{precip}%</span>
+                <span className="type-stat text-xs text-slate-300 w-8">{precip}%</span>
               ) : (
                 <span className="w-8" />
               )}
             </div>
             
             <div className="flex items-center justify-end space-x-3 w-20">
-              <span className="text-sm font-medium text-slate-400">{min}</span>
-              <span className="text-sm font-medium text-white">{max}</span>
+              <span className="type-stat text-sm text-slate-400">{min}&deg;</span>
+              <span className="type-stat text-sm text-white">{max}&deg;</span>
             </div>
           </div>
         );

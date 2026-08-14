@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Stars, Fish, Sailboat, Shirt, Bug } from 'lucide-react';
+import { Bike, Satellite, Fish, Sailboat, Pill, Bug } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { 
   computeOutdoorIndex, 
@@ -34,35 +34,32 @@ export function LifeIndexGrid({ data }: LifeIndexGridProps) {
   const humidity = data.current.relative_humidity_2m ?? 50;
 
   const indices = [
-    { ...computeOutdoorIndex(temp, wind, precipProb), icon: Compass },
-    { ...computeStargazingIndex(cloudCover), icon: Stars },
+    { ...computeOutdoorIndex(temp, wind, precipProb), icon: Bike },
+    { ...computeStargazingIndex(cloudCover), icon: Satellite },
     { ...computeFishingIndex(pressure, wind), icon: Fish },
     { ...computeSailingIndex(wind), icon: Sailboat },
-    { ...computeClothingIndex(feelsLike), icon: Shirt },
+    { ...computeClothingIndex(feelsLike), icon: Pill },
     { ...computeMosquitoIndex(temp, humidity), icon: Bug },
   ];
 
   return (
     <div className="w-full flex flex-col space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         {indices.map((item, idx) => {
           const Icon = item.icon;
           return (
-            <GlassCard key={idx} className="p-4 flex flex-col justify-between h-28 relative overflow-hidden group">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-sm font-medium text-slate-300">{item.category}</span>
-                <Icon className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+            <GlassCard key={idx} className="p-3 sm:p-4 flex flex-col items-center justify-between min-h-[120px] sm:min-h-[140px] text-center relative group">
+              <div className="flex flex-col items-center space-y-1.5 sm:space-y-2 mt-1 sm:mt-2">
+                <Icon className="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] text-white mx-auto" strokeWidth={2} />
+                <span className="type-card-title text-[13px] sm:text-[14px] font-semibold text-white tracking-tight leading-tight">{item.category}</span>
               </div>
-              <div className="flex-1 flex items-end">
-                <span className="text-base font-semibold text-white leading-tight">{item.label}</span>
+              <div className="pb-0.5 sm:pb-1 mt-auto pt-3 sm:pt-4">
+                <span className="type-caption text-[12px] sm:text-[13px] font-medium text-slate-300">{item.label}</span>
               </div>
             </GlassCard>
           );
         })}
       </div>
-      <p className="text-center text-xs text-slate-400 mt-2 opacity-60">
-        Computed based on current weather conditions.
-      </p>
     </div>
   );
 }

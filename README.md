@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo/weather_logo.png" alt="Aura Weather Logo" width="120" style="border-radius: 20px;" />
+  <img src="public/weather_logo.png" alt="Aura Weather Logo" width="120" style="border-radius: 20px;" />
 </p>
 
 # Aura Weather

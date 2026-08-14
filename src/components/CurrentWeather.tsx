@@ -6,9 +6,10 @@ import { AnimatedTemp } from './AnimatedTemp';
 interface CurrentWeatherProps {
   data: any;
   unit: TempUnit;
+  onToggleUnit?: () => void;
 }
 
-export function CurrentWeather({ data, unit }: CurrentWeatherProps) {
+export function CurrentWeather({ data, unit, onToggleUnit }: CurrentWeatherProps) {
   if (!data || !data.current) return null;
 
   const { current, daily, air_quality } = data;
@@ -18,47 +19,45 @@ export function CurrentWeather({ data, unit }: CurrentWeatherProps) {
   const rawMin = daily?.temperature_2m_min?.[0] ?? rawTemp;
   const rawMax = daily?.temperature_2m_max?.[0] ?? rawTemp;
   
-  const temp = convertTemp(rawTemp, unit);
-  const feelsLike = convertTemp(rawFeelsLike, unit);
-  const minTemp = convertTemp(rawMin, unit);
-  const maxTemp = convertTemp(rawMax, unit);
+  const temp = Math.round(convertTemp(rawTemp, unit));
+  const feelsLike = Math.round(convertTemp(rawFeelsLike, unit));
+  const minTemp = Math.round(convertTemp(rawMin, unit));
+  const maxTemp = Math.round(convertTemp(rawMax, unit));
 
   const codeDetails = getWeatherCodeDetails(current.current?.weather_code ?? current.weather_code);
-  
-  const pm25 = air_quality?.pm2_5;
 
   return (
-    <div className="flex flex-col w-full relative pt-2">
-      {/* PM 2.5 Badge - Left Aligned */}
-      {pm25 !== undefined && (
-        <div className="absolute top-0 left-0 flex items-center space-x-2">
-          <div className="flex flex-col items-center justify-center text-[10px] font-bold text-slate-200 leading-none">
-            <span>PM</span>
-            <span>2.5</span>
-          </div>
-          <span className="text-xl font-bold text-white leading-none">{Math.round(pm25)}</span>
-        </div>
-      )}
+    <div className="flex flex-col w-full relative py-12">
 
-      <div className="flex flex-col items-center text-center mt-12 sm:mt-16 space-y-2">
+      <div className="flex flex-col items-center text-center space-y-2">
+        {/* Weather Condition Icon Badge */}
+        <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shadow-lg mb-2">
+          <codeDetails.Icon className="w-6 h-6 text-white drop-shadow-sm" strokeWidth={1.5} />
+        </div>
+
         {/* Condition Label */}
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-wide text-white drop-shadow-md">
+        <h2 className="type-section-header text-2xl sm:text-3xl text-white drop-shadow-md">
           {codeDetails.label}
         </h2>
         
         {/* Hi / Lo / Feels Like */}
-        <p className="text-sm sm:text-base text-slate-200 font-medium drop-shadow-sm flex items-center space-x-2">
-          <span>{minTemp} ~ {maxTemp}&deg;{unit}</span>
-          <span>Feels like {feelsLike}&deg;{unit}</span>
+        <p className="type-body text-slate-300 drop-shadow-sm flex items-center space-x-2">
+          <span className="font-numeric font-medium text-slate-200">{minTemp}&deg; ~ {maxTemp}&deg;{unit}</span>
+          <span className="opacity-40">&bull;</span>
+          <span>Feels like <span className="font-numeric font-medium text-slate-200">{feelsLike}&deg;{unit}</span></span>
         </p>
       </div>
 
-      {/* Giant Temperature */}
-      <div className="flex justify-center items-start mt-6 mb-4">
-        <span className="text-[10rem] sm:text-[12rem] font-medium tabular-nums tracking-tighter text-white drop-shadow-xl leading-none">
+      {/* Giant Hero Temperature */}
+      <div 
+        onClick={onToggleUnit}
+        title="Tap to toggle °C / °F"
+        className={`flex justify-center items-start mt-8 ${onToggleUnit ? 'cursor-pointer select-none group' : ''}`}
+      >
+        <span className="type-hero text-8xl sm:text-9xl text-white drop-shadow-xl transition-transform group-active:scale-95 duration-200">
           <AnimatedTemp value={temp} />
         </span>
-        <span className="text-4xl sm:text-5xl font-medium text-white drop-shadow-lg mt-8 sm:mt-10">
+        <span className="font-sans font-medium text-4xl sm:text-5xl text-white/90 drop-shadow-lg mt-4 ml-1">
           &deg;{unit}
         </span>
       </div>

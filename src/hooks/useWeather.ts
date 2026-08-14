@@ -1,90 +1,53 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
+import { useWeatherContext, getCityId } from '../context/WeatherContext';
 
-interface WeatherData {
-  current: any;
-  hourly: any;
-  daily: any;
-  [key: string]: any;
-}
-
-interface WeatherState {
-  data: WeatherData | null;
-  loading: boolean;
-  error: string | null;
-}
-
-export function useWeather(coordinates: { lat: number; lon: number } | null, skip: boolean = false) {
-  const [state, setState] = useState<WeatherState>({
-    data: null,
-    loading: true,
-    error: null,
-  });
+export function useWeather(
+  coordinates: { lat?: number; lon?: number; name?: string } | null,
+  skip: boolean = false
+) {
+  const { store, fetchWeather, getWeatherState } = useWeatherContext();
   
-  const [retryCount, setRetryCount] = useState(0);
+  const lat = coordinates?.lat !== undefined && coordinates?.lat !== null ? Number(coordinates.lat) : undefined;
+  const lon = coordinates?.lon !== undefined && coordinates?.lon !== null ? Number(coordinates.lon) : undefined;
+  const name = coordinates?.name;
+
+  const key = useMemo(() => {
+    if (lat !== undefined && lon !== undefined && !isNaN(lat) && !isNaN(lon)) {
+      return `${lat.toFixed(4)},${lon.toFixed(4)}`;
+    }
+    return name ? name.toLowerCase().trim() : 'unknown';
+  }, [lat, lon, name]);
+
+  const state = useMemo(() => {
+    if (store[key]) {
+      return store[key];
+    }
+    if (lat !== undefined && lon !== undefined && !isNaN(lat) && !isNaN(lon)) {
+      return getWeatherState({ name, lat, lon });
+    }
+    return {
+      data: null,
+      loading: false,
+      error: null,
+      isCached: false,
+    };
+  }, [store, key, lat, lon, name, getWeatherState]);
 
   const retry = useCallback(() => {
-    setRetryCount(c => c + 1);
-  }, []);
+    if (lat !== undefined && lon !== undefined && !isNaN(lat) && !isNaN(lon)) {
+      fetchWeather({ name, lat, lon }, true);
+    }
+  }, [lat, lon, name, fetchWeather]);
 
   useEffect(() => {
-    if (!coordinates || skip) return;
+    if (skip || lat === undefined || lon === undefined || isNaN(lat) || isNaN(lon)) {
+      return;
+    }
+    fetchWeather({ name, lat, lon }, false);
+  }, [lat, lon, name, skip, fetchWeather]);
 
-    let isMounted = true;
-    setState(prev => ({ ...prev, loading: true, error: null }));
-
-    const fetchWeather = async () => {
-      try {
-        const { lat, lon } = coordinates;
-        const weatherParams = new URLSearchParams({
-          latitude: lat.toString(),
-          longitude: lon.toString(),
-          current: 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,uv_index,surface_pressure,visibility,cloud_cover',
-          hourly: 'temperature_2m,precipitation_probability,weather_code',
-          daily: 'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,moonrise,moonset',
-          minutely_15: 'precipitation',
-          past_days: '1',
-          timezone: 'auto'
-        });
-
-        const aqiParams = new URLSearchParams({
-          latitude: lat.toString(),
-          longitude: lon.toString(),
-          current: 'us_aqi,pm2_5,pm10,sulphur_dioxide,carbon_monoxide',
-          timezone: 'auto'
-        });
-
-        const [weatherResponse, aqiResponse] = await Promise.all([
-          fetch(`https://api.open-meteo.com/v1/forecast?${weatherParams.toString()}`),
-          fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${aqiParams.toString()}`)
-        ]);
-        
-        if (!weatherResponse.ok) {
-          throw new Error('Failed to fetch weather data');
-        }
-
-        const data = await weatherResponse.json();
-        
-        // AQI might fail or be unavailable for some locations, we shouldn't break the whole app
-        if (aqiResponse.ok) {
-          const aqiData = await aqiResponse.json();
-          data.air_quality = aqiData.current;
-        }
-        if (isMounted) {
-          setState({ data, loading: false, error: null });
-        }
-      } catch (error: any) {
-        if (isMounted) {
-          setState({ data: null, loading: false, error: error.message || 'Unknown error occurred' });
-        }
-      }
-    };
-
-    fetchWeather();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [coordinates, retryCount]);
-
-  return { ...state, retry };
+  return {
+    ...state,
+    retry
+  };
 }

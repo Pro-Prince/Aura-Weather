@@ -11,7 +11,7 @@ export function AlertBanner({ message, onDismiss }: AlertBannerProps) {
 
   return (
     <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-lg cursor-pointer hover:bg-black/50 transition-colors" onClick={onDismiss}>
-      <span className="text-sm font-medium text-white drop-shadow-sm">
+      <span className="type-body-medium text-sm text-white drop-shadow-sm">
         {message}
       </span>
     </div>

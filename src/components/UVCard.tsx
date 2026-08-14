@@ -19,13 +19,13 @@ export function UVCard({ uvIndex }: UVCardProps) {
   percentage = Math.max(0, Math.min(100, percentage));
 
   return (
-    <GlassCard className="p-4 flex flex-col justify-between h-[160px] relative overflow-hidden">
-      <div className="flex justify-between items-start">
-        <span className="text-sm font-medium text-slate-300">UV Index</span>
-        <Sun className="w-5 h-5 text-slate-300" />
+    <GlassCard className="p-4 sm:p-6 flex flex-col justify-between min-h-[192px] relative">
+      <div className="flex items-center space-x-1.5 mb-3">
+        <Sun className="w-[18px] h-[18px] text-slate-300" strokeWidth={1.5} />
+        <span className="type-card-title text-[14px] font-medium text-white">UV index</span>
       </div>
 
-      <div className="w-full mt-auto mb-2 relative">
+      <div className="w-full my-auto py-2 relative">
         <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-purple-500" />
         <div 
           className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md border border-slate-200"
@@ -33,12 +33,11 @@ export function UVCard({ uvIndex }: UVCardProps) {
         />
       </div>
 
-      <div className="flex flex-col mt-2">
-        <div className="flex items-end leading-none mb-1 space-x-1">
-          <span className="text-3xl font-bold text-white">{Math.round(uvIndex)}</span>
-          <span className="text-sm font-medium text-slate-300 mb-0.5">Level</span>
+      <div className="flex flex-col mt-auto pt-2">
+        <div className="flex items-baseline leading-none mb-1">
+          <span className="type-stat-lg text-3xl text-white">{Math.round(uvIndex)}</span>
         </div>
-        <span className="text-sm font-medium text-slate-400">{riskWord}</span>
+        <span className="type-body text-sm text-slate-300 leading-normal">{riskWord}</span>
       </div>
     </GlassCard>
   );

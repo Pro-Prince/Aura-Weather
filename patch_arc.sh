@@ -1,0 +1,2 @@
+sed -i 's/<div className="mb-6">/ <div className="flex items-center space-x-1.5 mb-3 z-10">/g' src/components/SunArcCard.tsx
+sed -i 's/<span className="type-card-title text-\[15px\] font-medium text-white">Sunrise & sunset<\/span>/<Sunrise className="w-[18px] h-[18px] text-slate-300" strokeWidth={1.5} \/>\n        <span className="type-card-title text-[14px] font-medium text-white">Sunrise \& sunset<\/span>/g' src/components/SunArcCard.tsx

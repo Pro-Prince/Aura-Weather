@@ -22,7 +22,7 @@ export function computeOutdoorIndex(temp: number, wind: number, precipProb: numb
     score = 3;
   }
 
-  return { category: 'Outdoor', label, score };
+  return { category: 'Outdoor activities', label, score };
 }
 
 export function computeStargazingIndex(cloudCover: number): LifeIndexResult {
@@ -101,7 +101,7 @@ export function computeClothingIndex(feelsLike: number): LifeIndexResult {
     label = 'Light clothing';
     score = 4;
   }
-  return { category: 'Clothing', label, score };
+  return { category: 'Cold', label, score };
 }
 
 export function computeMosquitoIndex(temp: number, humidity: number): LifeIndexResult {
@@ -117,5 +117,5 @@ export function computeMosquitoIndex(temp: number, humidity: number): LifeIndexR
     label = 'None';
     score = 4;
   }
-  return { category: 'Mosquito', label, score };
+  return { category: 'Mosquito activity', label, score };
 }
