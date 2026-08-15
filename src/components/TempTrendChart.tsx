@@ -101,8 +101,8 @@ export function TempTrendChart({ data, columnWidth, height, unit, resetKey, scro
   const markerY = useTransform(markerX, (x) => getInterpolatedValueAtX(x).y);
   
   // Smoothing with Spring
-  const smoothMarkerX = useSpring(markerX, { stiffness: 600, damping: 55, mass: 0.8 });
-  const smoothMarkerY = useSpring(markerY, { stiffness: 600, damping: 55, mass: 0.8 });
+  const smoothMarkerX = useSpring(markerX, { stiffness: 200, damping: 30, mass: 0.5 });
+  const smoothMarkerY = useSpring(markerY, { stiffness: 200, damping: 30, mass: 0.5 });
 
   // Reactive state for interpolated temperature
   const [interpolatedTemp, setInterpolatedTemp] = useState<number>(() => {
