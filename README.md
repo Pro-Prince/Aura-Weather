@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="public/weather_logo.png" alt="Aura Weather Logo" width="120" style="border-radius: 20px;" />
+  <img src="public/weather_logo.png" alt="Aura Weather Logo" width="120" style="border-radius: 20px;" /> # Aura Weather
+
 </p>
 
-# Aura Weather
 
 Aura Weather is a premium, ambient weather experience featuring dynamic atmospheric visual themes, hyper-accurate real-time weather forecasts, air quality index (AQI) tracking, UV radiation gauges, hourly/daily forecasts, and full offline-first PWA capabilities.
 
