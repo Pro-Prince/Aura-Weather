@@ -13,7 +13,7 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         manifest: {
           name: 'Aura Weather',
-          short_name: 'Aura',
+          short_name: 'Aura Weather',
           start_url: '/',
           display: 'standalone',
           theme_color: '#0f172a',

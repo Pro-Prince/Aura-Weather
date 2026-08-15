@@ -52,7 +52,7 @@ export function InstallPrompt() {
               <img src="/weather_logo.png" alt="Aura Weather" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
             <div className="flex-1">
-              <h3 className="text-slate-100 type-body-medium">Install Aura</h3>
+              <h3 className="text-slate-100 type-body-medium">Install Aura Weather</h3>
               <p className="text-slate-400 type-caption text-sm">Add to home screen for offline access</p>
             </div>
             <div className="flex items-center space-x-2">

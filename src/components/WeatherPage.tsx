@@ -31,17 +31,13 @@ interface WeatherPageProps {
   isGeo?: boolean;
   geoData?: any;
   unit: TempUnit;
-  isActive: boolean;
+  isActive?: boolean;
   onSearchClick: () => void;
   onToggleUnit?: () => void;
   showAddButton?: boolean;
   showBackButton?: boolean;
   onSaveLocation?: () => void;
   onBackToSearch?: () => void;
-  onScrollAtBottom: (isAtBottom: boolean) => void;
-  scrollProgress: number;
-  pagesCount: number;
-  onPageClick: (index: number) => void;
 }
 
 export function WeatherPage({
@@ -49,17 +45,13 @@ export function WeatherPage({
   isGeo,
   geoData,
   unit,
-  isActive,
+  isActive = true,
   onSearchClick,
   onToggleUnit,
   showAddButton,
   showBackButton,
   onSaveLocation,
-  onBackToSearch,
-  onScrollAtBottom,
-  scrollProgress,
-  pagesCount,
-  onPageClick
+  onBackToSearch
 }: WeatherPageProps) {
   const prefersReducedMotion = useAppReducedMotion();
   const tapScale = useTapScale();
@@ -97,24 +89,6 @@ export function WeatherPage({
   }, [isGeo, lat, lon]);
 
   const headerCityName = isGeo && geoCityName ? geoCityName : displayName;
-
-  useEffect(() => {
-    const scrollContainer = scrollRef.current;
-    if (!scrollContainer) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-      // If we are within 20px of the bottom, signal the indicators to show
-      const isAtBottom = scrollHeight - scrollTop <= clientHeight + 20;
-      onScrollAtBottom(isAtBottom);
-    };
-
-    scrollContainer.addEventListener('scroll', handleScroll);
-    // Initial check
-    handleScroll();
-    
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [onScrollAtBottom]);
 
   const activeCoordinates = useMemo(() => {
     if (lat !== undefined && lon !== undefined && lat !== null && lon !== null && !isNaN(Number(lat)) && !isNaN(Number(lon))) {
@@ -432,39 +406,9 @@ export function WeatherPage({
               ) : null}
             </motion.div>
           </AnimatePresence>
-          {/* Embedded Pagination Indicators or normal bottom spacing when single city */}
-          {pagesCount > 1 ? (
-            <div className="w-full flex justify-center items-center pt-4 pb-8 mt-2">
-              <div className="relative flex items-center space-x-4 px-4 py-2">
-                {Array.from({ length: pagesCount }).map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => onPageClick(i)}
-                    aria-label={i === 0 ? 'Current Location' : `City ${i}`}
-                    className="relative w-5 h-5 flex items-center justify-center transition-all duration-300 z-20"
-                  >
-                    {i === 0 ? (
-                      <MapPin 
-                        className={`w-3.5 h-3.5 transition-all duration-300 ${
-                          Math.abs(scrollProgress - i) < 0.5 ? 'text-white' : 'text-white/30'
-                        }`} 
-                        fill="none"
-                        strokeWidth={2.5}
-                      />
-                    ) : (
-                      <div className={`rounded-full transition-all duration-300 ${
-                        Math.abs(scrollProgress - i) < 0.5 
-                          ? 'w-2 h-2 bg-white' 
-                          : 'w-1.5 h-1.5 bg-white/30'
-                      }`} />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="w-full pt-4 pb-8" aria-hidden="true" />
-          )}
+
+          {/* Clean bottom breathing space */}
+          <div className="w-full pt-4 pb-8" aria-hidden="true" />
         </motion.div>
       </div>
     </div>

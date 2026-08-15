@@ -3,16 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { Search, Bookmark, BookmarkCheck, ListPlus, MoreVertical, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WeatherPage } from './components/WeatherPage';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useSavedCities } from './hooks/useSavedCities';
 import { TempUnit } from './utils/convertTemp';
-import { useOverscroll } from './hooks/useOverscroll';
-import { useTapScale, springTransition } from './utils/motion';
 import { InstallPrompt } from './components/InstallPrompt';
 import { CityManagement } from './components/CityManagement';
 import { LocationData } from './components/SearchOverlay';
@@ -120,7 +115,7 @@ export default function App() {
 
 function AppContent() {
   const geo = useGeolocation();
-  const { savedCities, addCity, removeCity, removeCities, reorderCities, isSaved } = useSavedCities();
+  const { savedCities, addCity, removeCities, reorderCities, isSaved } = useSavedCities();
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchDefaultMode, setSearchDefaultMode] = useState(false);
@@ -129,14 +124,8 @@ function AppContent() {
   const [countryCode, setCountryCode] = useState(() => inferCountryCodeFromTimezone());
   const [currentCityName, setCurrentCityName] = useState<string>('');
   
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [showIndicators, setShowIndicators] = useState(false);
+  const [activeCityId, setActiveCityId] = useState<string>('geo');
   const [temporaryCity, setTemporaryCity] = useState<LocationData | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const programmaticScrollRef = useRef(false);
-  const tapScale = useTapScale();
-  const overscrollX = useOverscroll(scrollRef);
 
   useEffect(() => {
     const saved = localStorage.getItem('aura-temp-unit');
@@ -186,6 +175,13 @@ function AppContent() {
     return { lat: 51.5074, lon: -0.1278 };
   }, [lat, lon]);
 
+  const currentGeoLocation: LocationData = useMemo(() => ({
+    name: geo.isFallback ? 'London' : (currentCityName || 'Current Location'),
+    lat: geoCoords.lat,
+    lon: geoCoords.lon,
+    isGeo: true,
+  }), [geo.isFallback, currentCityName, geoCoords.lat, geoCoords.lon]);
+
   const toggleUnit = () => {
     setUnit(prev => {
       const next = prev === 'C' ? 'F' : 'C';
@@ -194,184 +190,72 @@ function AppContent() {
     });
   };
 
-  const pages = useMemo(() => {
-    const list = [
-      { id: 'geo', isGeo: true, location: { name: geo.isFallback ? 'London' : currentCityName, lat: geoCoords.lat, lon: geoCoords.lon } },
-      ...savedCities.map(c => ({ id: c.name, isGeo: false, location: c }))
-    ];
-
-    if (temporaryCity && !isSaved(temporaryCity.name)) {
-      list.push({ id: temporaryCity.name, isGeo: false, location: temporaryCity });
-    }
-    return list;
-  }, [geo.isFallback, lat, lon, savedCities, temporaryCity, isSaved]);
-
-  const handleScroll = () => {
-    if (!scrollRef.current) return;
-    const scrollLeft = scrollRef.current.scrollLeft;
-    const width = scrollRef.current.clientWidth || 1;
-    setScrollProgress(scrollLeft / width);
-
-    const newIndex = Math.round(scrollLeft / width);
-    if (newIndex !== activeIndex) {
-      setActiveIndex(newIndex);
-      // Reset search context if user manually scrolls away
-      if (isFromSearch && !programmaticScrollRef.current) {
-        setIsFromSearch(false);
-      }
-      programmaticScrollRef.current = false;
-    }
-  };
-
-  const scrollToPage = useCallback((index: number, instant = false) => {
-    if (index < 0 || index >= pages.length) return;
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ 
-        left: index * scrollRef.current.clientWidth, 
-        behavior: instant ? 'auto' : 'smooth' 
-      });
-    }
-  }, [pages.length]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const activeEl = document.activeElement;
-      if (
-        activeEl instanceof HTMLInputElement ||
-        activeEl instanceof HTMLTextAreaElement ||
-        activeEl?.getAttribute('contenteditable') === 'true' ||
-        isSearchOpen
-      ) {
-        return;
-      }
-
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        scrollToPage(activeIndex - 1);
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        scrollToPage(activeIndex + 1);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeIndex, pages.length, isSearchOpen, scrollToPage]);
-
   const handleSelectLocation = useCallback((loc: LocationData, fromSearch: boolean) => {
     setIsSearchOpen(false);
-    setIsFromSearch(true);
+    setIsFromSearch(fromSearch);
     setSearchDefaultMode(fromSearch);
     
-    // Check if it's already in the list
-    const existingIndex = pages.findIndex(p => p.location.name === loc.name);
-    
-    if (existingIndex !== -1) {
-      setActiveIndex(existingIndex);
-      programmaticScrollRef.current = true;
-      // Use instant scroll for search selection
-      if (scrollRef.current) {
-        scrollRef.current.scrollTo({ 
-          left: existingIndex * scrollRef.current.clientWidth, 
-          behavior: 'auto' 
-        });
-      }
+    if (loc.isGeo || (loc.lat === geoCoords.lat && loc.lon === geoCoords.lon && !loc.name)) {
+      setActiveCityId('geo');
+      setTemporaryCity(null);
+    } else if (isSaved(loc.name)) {
+      setActiveCityId(loc.name);
+      setTemporaryCity(null);
     } else {
-      // It's a new temporary city
       setTemporaryCity(loc);
-      // The scroll will be handled by a useEffect once pages update
+      setActiveCityId(loc.name);
     }
-  }, [pages, scrollToPage]);
+  }, [geoCoords.lat, geoCoords.lon, isSaved]);
 
-  // Handle scrolling when temporaryCity changes or pages update
-  useEffect(() => {
-    if (isFromSearch) {
-      const targetName = temporaryCity?.name;
-      if (targetName) {
-        const index = pages.findIndex(p => p.location.name === targetName);
-        if (index !== -1 && index !== activeIndex) {
-          setActiveIndex(index);
-          programmaticScrollRef.current = true;
-          if (scrollRef.current) {
-            scrollRef.current.scrollTo({ 
-              left: index * scrollRef.current.clientWidth, 
-              behavior: 'auto' 
-            });
-          }
-        }
-      }
+  const activeLocation = useMemo(() => {
+    if (activeCityId === 'geo') {
+      return currentGeoLocation;
     }
-  }, [pages, temporaryCity, isFromSearch, activeIndex]);
+    if (temporaryCity && temporaryCity.name === activeCityId) {
+      return { ...temporaryCity, isGeo: false };
+    }
+    const saved = savedCities.find(c => c.name === activeCityId);
+    if (saved) {
+      return { ...saved, isGeo: false };
+    }
+    return currentGeoLocation;
+  }, [activeCityId, currentGeoLocation, temporaryCity, savedCities]);
 
-  const currentPage = pages[activeIndex] || pages[0];
-  const isCurrentSaved = currentPage && !currentPage.isGeo && isSaved(currentPage.location.name!);
+  const isCurrentGeo = activeLocation.isGeo ?? (activeCityId === 'geo');
+  const showAddBtn = Boolean(temporaryCity && temporaryCity.name === activeLocation.name && !isSaved(temporaryCity.name));
   const popularDomestic = POPULAR_DOMESTIC_MAPPING[countryCode] || POPULAR_DOMESTIC_MAPPING['US'];
 
   return (
     <div className="h-screen w-full flex flex-col text-slate-100 overflow-hidden relative bg-slate-950">
-      {/* Swipeable Pages */}
-      <motion.div 
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="w-full h-full flex overflow-x-auto snap-x snap-mandatory hide-scrollbar z-10"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', x: overscrollX }}
-      >
-        {pages.map((page, index) => (
-          <WeatherPage
-            key={page.id}
-            location={page.location as any}
-            isGeo={page.isGeo}
-            geoData={geo}
-            unit={unit}
-            isActive={activeIndex === index}
-            onSearchClick={() => {
-              setSearchDefaultMode(isFromSearch);
-              setIsSearchOpen(true);
-            }}
-            onToggleUnit={toggleUnit}
-            showAddButton={temporaryCity?.name === page.id}
-            showBackButton={isFromSearch && activeIndex === index}
-            onSaveLocation={() => {
-              if (temporaryCity) {
-                const cityToSave = { ...temporaryCity };
-                addCity(cityToSave);
-                setTemporaryCity(null);
-                // Keep isFromSearch true to allow going back to search even after saving
-                
-                // After adding, we want to stay on this city.
-                // It will now be in savedCities.
-                // We'll let the next render cycle handle index alignment.
-                setTimeout(() => {
-                  const newIndex = pages.findIndex(p => p.location.name === cityToSave.name);
-                  if (newIndex !== -1) {
-                    setActiveIndex(newIndex);
-                    programmaticScrollRef.current = true;
-                    if (scrollRef.current) {
-                      scrollRef.current.scrollTo({ 
-                        left: newIndex * scrollRef.current.clientWidth, 
-                        behavior: 'auto' 
-                      });
-                    }
-                  }
-                }, 0);
-              }
-            }}
-            onBackToSearch={() => {
-              setTemporaryCity(null);
-              setIsFromSearch(false);
-              setIsSearchOpen(true);
-            }}
-            onScrollAtBottom={(isAtBottom) => {
-              if (activeIndex === index) {
-                setShowIndicators(isAtBottom);
-              }
-            }}
-            scrollProgress={scrollProgress}
-            pagesCount={pages.length}
-            onPageClick={scrollToPage}
-          />
-        ))}
-      </motion.div>
+      {/* Single View Weather Page - No horizontal swipe */}
+      <WeatherPage
+        key={activeLocation.name + (isCurrentGeo ? '_geo' : '')}
+        location={activeLocation}
+        isGeo={isCurrentGeo}
+        geoData={geo}
+        unit={unit}
+        isActive={true}
+        onSearchClick={() => {
+          setSearchDefaultMode(false);
+          setIsSearchOpen(true);
+        }}
+        onToggleUnit={toggleUnit}
+        showAddButton={showAddBtn}
+        showBackButton={isFromSearch}
+        onSaveLocation={() => {
+          if (temporaryCity) {
+            const cityToSave = { ...temporaryCity };
+            addCity(cityToSave);
+            setTemporaryCity(null);
+            setActiveCityId(cityToSave.name);
+          }
+        }}
+        onBackToSearch={() => {
+          setTemporaryCity(null);
+          setIsFromSearch(false);
+          setIsSearchOpen(true);
+        }}
+      />
 
       <InstallPrompt />
 
@@ -382,11 +266,16 @@ function AppContent() {
           setSearchDefaultMode(false);
         }}
         savedCities={savedCities}
-        currentLocation={pages[0].location as LocationData}
+        currentLocation={currentGeoLocation}
         unit={unit}
         onSelectLocation={handleSelectLocation}
         reorderCities={reorderCities}
-        removeCities={removeCities}
+        removeCities={(names) => {
+          removeCities(names);
+          if (names.includes(activeCityId)) {
+            setActiveCityId('geo');
+          }
+        }}
         onSaveLocation={(loc) => {
           if (!isSaved(loc.name)) {
             addCity(loc);

@@ -11,6 +11,7 @@ export interface LocationData {
   lat: number;
   lon: number;
   name: string;
+  isGeo?: boolean;
 }
 
 interface SearchOverlayProps {
