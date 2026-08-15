@@ -43,7 +43,16 @@ export function useWeather(
     if (skip || lat === undefined || lon === undefined || isNaN(lat) || isNaN(lon)) {
       return;
     }
+    
+    // Initial fetch
     fetchWeather({ name, lat, lon }, false);
+    
+    // Set up polling (every minute)
+    const interval = setInterval(() => {
+      fetchWeather({ name, lat, lon }, true); // Force update to bypass freshness check
+    }, 60000);
+    
+    return () => clearInterval(interval);
   }, [lat, lon, name, skip, fetchWeather]);
 
   return {

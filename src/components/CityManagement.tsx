@@ -64,9 +64,7 @@ function CityCard({
   isSelected,
   onToggleSelect,
   dragControls,
-  isOpen = false,
-  onMoveUp,
-  onMoveDown
+  isOpen = false
 }: { 
   location: LocationData, 
   isGeo: boolean, 
@@ -76,9 +74,7 @@ function CityCard({
   isSelected?: boolean,
   onToggleSelect?: () => void,
   dragControls?: any,
-  isOpen?: boolean,
-  onMoveUp?: () => void,
-  onMoveDown?: () => void
+  isOpen?: boolean
 }) {
   const { data, loading } = useWeather(location, false);
   
@@ -121,7 +117,7 @@ function CityCard({
             onClick();
           }
         }}
-        className={`w-full relative h-28 rounded-2xl overflow-hidden flex items-center justify-between text-left ${cardBgClass} ${isEditMode ? 'pl-14 pr-16' : 'px-5'}`}
+        className={`w-full relative h-28 rounded-2xl overflow-hidden flex items-center justify-between text-left ${cardBgClass} ${isEditMode ? (isGeo ? 'pl-14 pr-5' : 'pl-14 pr-16') : 'px-5'}`}
       >
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
           <SkyBackground visualState={visualState} />
@@ -129,25 +125,29 @@ function CityCard({
         
         {isEditMode && (
            <div 
-             className="absolute left-4 z-20 cursor-pointer p-2"
+             className="absolute left-4 z-20 cursor-pointer p-2 flex items-center justify-center"
+             onClick={(e) => {
+               e.stopPropagation();
+               if (onToggleSelect) onToggleSelect();
+             }}
            >
-             {isSelected ? <CheckSquare className="w-5 h-5 text-sky-400" strokeWidth={2} /> : <Square className="w-5 h-5 text-slate-400" strokeWidth={2} />}
+             {isSelected ? <CheckSquare className="w-5 h-5 text-sky-400" strokeWidth={2.2} /> : <Square className="w-5 h-5 text-slate-300" strokeWidth={2.2} />}
            </div>
         )}
 
-        <div className="flex flex-col z-10 h-full justify-center">
-          <div className="flex items-center space-x-2">
-            <span className="type-city-title text-xl text-white drop-shadow-sm font-semibold">{location.name}</span>
-            {isGeo && <MapPin className="w-4 h-4 text-white drop-shadow-sm inline-block" strokeWidth={2} />}
+        <div className="flex flex-col z-10 h-full justify-center min-w-0 flex-1 mr-2">
+          <div className="flex items-center space-x-2 truncate">
+            <span className="type-city-title text-xl text-white drop-shadow-sm font-semibold truncate">{location.name}</span>
+            {isGeo && <MapPin className="w-4 h-4 text-white drop-shadow-sm inline-block shrink-0" strokeWidth={2} />}
           </div>
           <div className="flex flex-col mt-0.5 z-10">
             <span className="type-caption text-slate-100 text-xs drop-shadow-sm opacity-80">{localTime || 'Local time'}</span>
-            <span className="type-body-medium text-slate-100 text-sm drop-shadow-sm font-medium mt-1">{codeDetails?.label || 'Loading...'}</span>
+            <span className="type-body-medium text-slate-100 text-sm drop-shadow-sm font-medium mt-1 truncate">{codeDetails?.label || 'Loading...'}</span>
           </div>
         </div>
         
-        <div className="flex flex-col items-end z-10 h-full justify-center">
-          <div className="type-stat-lg text-4xl sm:text-5xl text-white drop-shadow-md font-bold">
+        <div className="flex flex-col items-end z-10 h-full justify-center shrink-0">
+          <div className="type-stat-lg text-3xl sm:text-4xl text-white drop-shadow-md font-bold">
             {temp}&deg;
           </div>
           <div className="type-caption text-slate-100 text-xs drop-shadow-sm opacity-90 mt-1">
@@ -155,17 +155,18 @@ function CityCard({
           </div>
         </div>
 
-        {isEditMode && !isGeo && (
-           <div className="absolute right-2 z-20 flex flex-col space-y-1 items-center justify-center">
-             {dragControls && (
-               <div 
-                 className="text-white cursor-grab active:cursor-grabbing p-2 bg-white/10 rounded-full"
-                 onPointerDown={(e) => dragControls.start(e)}
-                 title="Drag to reorder"
-               >
-                 <GripVertical className="w-4 h-4" strokeWidth={2} />
-               </div>
-             )}
+        {isEditMode && !isGeo && dragControls && (
+           <div 
+             className="absolute right-3.5 z-20 p-2.5 text-white cursor-grab active:cursor-grabbing hover:bg-white/10 active:bg-white/20 rounded-xl transition-colors select-none touch-none flex items-center justify-center"
+             style={{ touchAction: 'none' }}
+             onPointerDown={(e) => {
+               e.stopPropagation();
+               dragControls.start(e);
+             }}
+             title="Drag to reorder"
+             aria-label={`Drag to reorder ${location.name}`}
+           >
+             <GripVertical className="w-5 h-5 text-white/80" strokeWidth={2.2} />
            </div>
         )}
       </motion.div>
@@ -181,8 +182,11 @@ function DraggableCityCard(props: any) {
       id={props.location.name} 
       dragListener={false} 
       dragControls={controls}
-      onDrag={(event, info) => props.onDragUpdate?.(info.point.y)}
-      onDragEnd={() => props.onDragUpdate?.(null)}
+      style={{ position: 'relative', touchAction: 'none' }}
+      className="select-none"
+      whileDrag={{ scale: 1.02, zIndex: 50, filter: 'drop-shadow(0 15px 15px rgba(0,0,0,0.6))' }}
+      onDragStart={() => props.onDragStart?.()}
+      onDragEnd={() => props.onDragEnd?.()}
     >
       <CityCard {...props} dragControls={controls} />
     </Reorder.Item>
@@ -205,7 +209,7 @@ export function CityManagement({
 }: CityManagementProps) {
   const tapScale = useTapScale();
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-  const [dragY, setDragY] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(defaultSearchMode);
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 50);
@@ -334,60 +338,10 @@ export function CityManagement({
     reorderCities(newOrder);
   };
 
-  const handleMoveUp = (index: number) => {
-    if (index <= 0) return;
-    const updated = [...localSavedCities];
-    const temp = updated[index];
-    updated[index] = updated[index - 1];
-    updated[index - 1] = temp;
-    setLocalSavedCities(updated);
-    reorderCities(updated);
-  };
-
-  const handleMoveDown = (index: number) => {
-    if (index >= localSavedCities.length - 1) return;
-    const updated = [...localSavedCities];
-    const temp = updated[index];
-    updated[index] = updated[index + 1];
-    updated[index + 1] = temp;
-    setLocalSavedCities(updated);
-    reorderCities(updated);
-  };
-
   const { data: currentWeatherData } = useWeather(currentLocation, false);
   const currentVisualState = useMemo(() => {
     return getWeatherVisualState(currentWeatherData?.current, currentWeatherData?.daily);
   }, [currentWeatherData?.current, currentWeatherData?.daily]);
-
-  useEffect(() => {
-    if (dragY === null || !scrollContainerRef.current) return;
-
-    let animationFrameId: number;
-    const scrollContainer = scrollContainerRef.current;
-    const threshold = 120; // Distance from top/bottom to start scrolling
-
-    const autoScroll = () => {
-      if (dragY === null) return;
-      
-      const rect = scrollContainer.getBoundingClientRect();
-      const relativeY = dragY - rect.top;
-      
-      if (relativeY < threshold) {
-        // Scroll up faster the closer it is to the edge
-        const speed = Math.min(15, (threshold - relativeY) / 4);
-        scrollContainer.scrollTop -= speed;
-      } else if (relativeY > rect.height - threshold) {
-        // Scroll down faster the closer it is to the edge
-        const speed = Math.min(15, (relativeY - (rect.height - threshold)) / 4);
-        scrollContainer.scrollTop += speed;
-      }
-      
-      animationFrameId = requestAnimationFrame(autoScroll);
-    };
-
-    animationFrameId = requestAnimationFrame(autoScroll);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [dragY]);
 
   if (!isOpen) return null;
 
@@ -395,7 +349,7 @@ export function CityManagement({
     <div className="fixed inset-0 z-50 bg-black text-slate-100 flex flex-col overflow-hidden">
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto hide-scrollbar pb-24 z-10 relative" 
+        className={`flex-1 ${isDragging ? 'overflow-hidden' : 'overflow-y-auto'} hide-scrollbar pb-24 z-10 relative`} 
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         
@@ -522,7 +476,7 @@ export function CityManagement({
                 }} 
               />
               
-              <Reorder.Group axis="y" values={localSavedCities} onReorder={handleReorder}>
+              <Reorder.Group as="div" axis="y" values={localSavedCities} onReorder={handleReorder} className="w-full">
                 {localSavedCities.map((city) => (
                   <DraggableCityCard
                     key={city.name}
@@ -533,7 +487,8 @@ export function CityManagement({
                     isOpen={isOpen}
                     isSelected={selectedCities.has(city.name)}
                     onToggleSelect={() => toggleSelectCity(city.name)}
-                    onDragUpdate={(y: number | null) => setDragY(y)}
+                    onDragStart={() => setIsDragging(true)}
+                    onDragEnd={() => setIsDragging(false)}
                     onClick={() => {
                       if (!isEditMode) {
                         onSelectLocation(city, false);
@@ -571,7 +526,6 @@ export function CityManagement({
                               </span>
                             </div>
                           </div>
-                          {saved && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
                         </div>
                       </motion.button>
                     );
@@ -610,7 +564,6 @@ export function CityManagement({
                             }`}
                           >
                             {city.name}
-                            {saved && <div className="w-1 h-1 rounded-full bg-blue-400" />}
                           </motion.button>
                         );
                       })}
@@ -632,7 +585,6 @@ export function CityManagement({
                             }`}
                           >
                             {city.name}
-                            {saved && <div className="w-1 h-1 rounded-full bg-blue-400" />}
                           </motion.button>
                         );
                       })}
