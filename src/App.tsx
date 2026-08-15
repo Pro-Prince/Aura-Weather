@@ -124,13 +124,17 @@ function AppContent() {
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchDefaultMode, setSearchDefaultMode] = useState(false);
+  const [isFromSearch, setIsFromSearch] = useState(false);
   const [unit, setUnit] = useState<TempUnit>('C');
   const [countryCode, setCountryCode] = useState(() => inferCountryCodeFromTimezone());
-  const [currentCityName, setCurrentCityName] = useState<string>('Current Location');
+  const [currentCityName, setCurrentCityName] = useState<string>('');
   
   const [activeIndex, setActiveIndex] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [showIndicators, setShowIndicators] = useState(false);
   const [temporaryCity, setTemporaryCity] = useState<LocationData | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const programmaticScrollRef = useRef(false);
   const tapScale = useTapScale();
   const overscrollX = useOverscroll(scrollRef);
 
@@ -205,17 +209,27 @@ function AppContent() {
   const handleScroll = () => {
     if (!scrollRef.current) return;
     const scrollLeft = scrollRef.current.scrollLeft;
-    const width = scrollRef.current.clientWidth;
+    const width = scrollRef.current.clientWidth || 1;
+    setScrollProgress(scrollLeft / width);
+
     const newIndex = Math.round(scrollLeft / width);
     if (newIndex !== activeIndex) {
       setActiveIndex(newIndex);
+      // Reset search context if user manually scrolls away
+      if (isFromSearch && !programmaticScrollRef.current) {
+        setIsFromSearch(false);
+      }
+      programmaticScrollRef.current = false;
     }
   };
 
-  const scrollToPage = useCallback((index: number) => {
+  const scrollToPage = useCallback((index: number, instant = false) => {
     if (index < 0 || index >= pages.length) return;
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({ left: index * scrollRef.current.clientWidth, behavior: 'smooth' });
+      scrollRef.current.scrollTo({ 
+        left: index * scrollRef.current.clientWidth, 
+        behavior: instant ? 'auto' : 'smooth' 
+      });
     }
   }, [pages.length]);
 
@@ -244,20 +258,50 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeIndex, pages.length, isSearchOpen, scrollToPage]);
 
-  const handleSelectLocation = (loc: LocationData) => {
+  const handleSelectLocation = useCallback((loc: LocationData, fromSearch: boolean) => {
     setIsSearchOpen(false);
-    let targetIndex = pages.findIndex(p => p.id === loc.name);
+    setIsFromSearch(true);
+    setSearchDefaultMode(fromSearch);
     
-    if (targetIndex !== -1) {
-      scrollToPage(targetIndex);
+    // Check if it's already in the list
+    const existingIndex = pages.findIndex(p => p.location.name === loc.name);
+    
+    if (existingIndex !== -1) {
+      setActiveIndex(existingIndex);
+      programmaticScrollRef.current = true;
+      // Use instant scroll for search selection
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ 
+          left: existingIndex * scrollRef.current.clientWidth, 
+          behavior: 'auto' 
+        });
+      }
     } else {
+      // It's a new temporary city
       setTemporaryCity(loc);
-      setTimeout(() => {
-        const newIdx = pages.length;
-        scrollToPage(newIdx);
-      }, 100);
+      // The scroll will be handled by a useEffect once pages update
     }
-  };
+  }, [pages, scrollToPage]);
+
+  // Handle scrolling when temporaryCity changes or pages update
+  useEffect(() => {
+    if (isFromSearch) {
+      const targetName = temporaryCity?.name;
+      if (targetName) {
+        const index = pages.findIndex(p => p.location.name === targetName);
+        if (index !== -1 && index !== activeIndex) {
+          setActiveIndex(index);
+          programmaticScrollRef.current = true;
+          if (scrollRef.current) {
+            scrollRef.current.scrollTo({ 
+              left: index * scrollRef.current.clientWidth, 
+              behavior: 'auto' 
+            });
+          }
+        }
+      }
+    }
+  }, [pages, temporaryCity, isFromSearch, activeIndex]);
 
   const currentPage = pages[activeIndex] || pages[0];
   const isCurrentSaved = currentPage && !currentPage.isGeo && isSaved(currentPage.location.name!);
@@ -281,64 +325,53 @@ function AppContent() {
             unit={unit}
             isActive={activeIndex === index}
             onSearchClick={() => {
-              setSearchDefaultMode(false);
+              setSearchDefaultMode(isFromSearch);
               setIsSearchOpen(true);
             }}
             onToggleUnit={toggleUnit}
-            isTemporary={temporaryCity?.name === page.id}
+            showAddButton={temporaryCity?.name === page.id}
+            showBackButton={isFromSearch && activeIndex === index}
             onSaveLocation={() => {
               if (temporaryCity) {
-                addCity(temporaryCity);
+                const cityToSave = { ...temporaryCity };
+                addCity(cityToSave);
                 setTemporaryCity(null);
+                // Keep isFromSearch true to allow going back to search even after saving
+                
+                // After adding, we want to stay on this city.
+                // It will now be in savedCities.
+                // We'll let the next render cycle handle index alignment.
+                setTimeout(() => {
+                  const newIndex = pages.findIndex(p => p.location.name === cityToSave.name);
+                  if (newIndex !== -1) {
+                    setActiveIndex(newIndex);
+                    programmaticScrollRef.current = true;
+                    if (scrollRef.current) {
+                      scrollRef.current.scrollTo({ 
+                        left: newIndex * scrollRef.current.clientWidth, 
+                        behavior: 'auto' 
+                      });
+                    }
+                  }
+                }, 0);
               }
             }}
             onBackToSearch={() => {
               setTemporaryCity(null);
-              setSearchDefaultMode(true);
+              setIsFromSearch(false);
               setIsSearchOpen(true);
             }}
+            onScrollAtBottom={(isAtBottom) => {
+              if (activeIndex === index) {
+                setShowIndicators(isAtBottom);
+              }
+            }}
+            scrollProgress={scrollProgress}
+            pagesCount={pages.length}
+            onPageClick={scrollToPage}
           />
         ))}
       </motion.div>
-
-      {/* Fixed Interactive Page Indicator & Navigation Bar */}
-      {pages.length > 1 && createPortal(
-        <div className="fixed bottom-6 left-0 right-0 flex justify-center items-center z-40 pointer-events-none pb-[env(safe-area-env-bottom)]">
-          <div className="flex items-center space-x-2.5 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-xl border border-white/15 shadow-[0_8px_30px_rgb(0,0,0,0.4)] pointer-events-auto">
-            <button
-              onClick={() => scrollToPage(activeIndex - 1)}
-              disabled={activeIndex === 0}
-              aria-label="Previous city"
-              className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/15 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer transition-all"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="flex items-center space-x-2">
-              {pages.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => scrollToPage(i)}
-                  aria-label={`Go to page ${i + 1}`}
-                  className={`h-1.5 rounded-full cursor-pointer transition-all duration-300 ${
-                    i === activeIndex ? 'w-5 bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]' : 'w-1.5 bg-white/30 hover:bg-white/60'
-                  }`}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={() => scrollToPage(activeIndex + 1)}
-              disabled={activeIndex === pages.length - 1}
-              aria-label="Next city"
-              className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/15 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer transition-all"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
 
       <InstallPrompt />
 

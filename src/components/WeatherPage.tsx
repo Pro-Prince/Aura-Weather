@@ -34,9 +34,14 @@ interface WeatherPageProps {
   isActive: boolean;
   onSearchClick: () => void;
   onToggleUnit?: () => void;
-  isTemporary?: boolean;
+  showAddButton?: boolean;
+  showBackButton?: boolean;
   onSaveLocation?: () => void;
   onBackToSearch?: () => void;
+  onScrollAtBottom: (isAtBottom: boolean) => void;
+  scrollProgress: number;
+  pagesCount: number;
+  onPageClick: (index: number) => void;
 }
 
 export function WeatherPage({
@@ -47,9 +52,14 @@ export function WeatherPage({
   isActive,
   onSearchClick,
   onToggleUnit,
-  isTemporary,
+  showAddButton,
+  showBackButton,
   onSaveLocation,
-  onBackToSearch
+  onBackToSearch,
+  onScrollAtBottom,
+  scrollProgress,
+  pagesCount,
+  onPageClick
 }: WeatherPageProps) {
   const prefersReducedMotion = useAppReducedMotion();
   const tapScale = useTapScale();
@@ -64,7 +74,7 @@ export function WeatherPage({
 
   const lat = isGeo ? (geoData?.coordinates?.lat ?? location?.lat) : location?.lat;
   const lon = isGeo ? (geoData?.coordinates?.lon ?? location?.lon) : location?.lon;
-  const displayName = location?.name || 'Current Location';
+  const displayName = location?.name || '';
 
   const [geoCityName, setGeoCityName] = useState<string>('');
 
@@ -87,6 +97,24 @@ export function WeatherPage({
   }, [isGeo, lat, lon]);
 
   const headerCityName = isGeo && geoCityName ? geoCityName : displayName;
+
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      // If we are within 20px of the bottom, signal the indicators to show
+      const isAtBottom = scrollHeight - scrollTop <= clientHeight + 20;
+      onScrollAtBottom(isAtBottom);
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    // Initial check
+    handleScroll();
+    
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [onScrollAtBottom]);
 
   const activeCoordinates = useMemo(() => {
     if (lat !== undefined && lon !== undefined && lat !== null && lon !== null && !isNaN(Number(lat)) && !isNaN(Number(lon))) {
@@ -225,7 +253,7 @@ export function WeatherPage({
       {/* Scrollable Content Container */}
       <div 
         ref={scrollRef} 
-        className="w-full h-full overflow-y-auto px-4 sm:px-6 md:px-8 pb-12 pt-4 flex flex-col items-center hide-scrollbar z-10 relative" 
+        className="w-full h-full overflow-y-auto px-4 sm:px-6 md:px-8 pb-0 pt-4 flex flex-col items-center hide-scrollbar z-10 relative" 
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', overscrollBehaviorY: 'contain' }}
       >
         {/* Pull to refresh spinner */}
@@ -241,60 +269,59 @@ export function WeatherPage({
           className="w-full max-w-md md:max-w-xl lg:max-w-2xl flex flex-col space-y-8"
         >
           {/* Page Header in normal document flow - rendered exactly once per page, scrolls naturally */}
-          <header className="w-full py-3 sm:py-5 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              {isTemporary && (
+          <header className="w-full py-4 sm:py-6 flex items-center justify-between gap-4">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+              {showBackButton && (
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: tapScale }}
                   onClick={onBackToSearch}
-                  className="p-2 -ml-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                  className="p-2 -ml-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors shrink-0"
                 >
-                  <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2} />
+                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
                 </motion.button>
               )}
-              <div className="flex flex-col">
-                <h1 className="type-city-title text-2xl sm:text-3xl text-white drop-shadow-md flex items-center gap-2">
-                  {headerCityName}
-                  {isGeo && <MapPin className="w-5 h-5 text-white" strokeWidth={1.5} />}
+              <div className="flex flex-col min-w-0">
+                <h1 className="type-city-title text-xl sm:text-2xl md:text-3xl text-white drop-shadow-md flex items-center gap-1.5 sm:gap-2 truncate">
+                  <span className="truncate leading-tight">{headerCityName}</span>
+                  {isGeo && <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-white/90 shrink-0" strokeWidth={2} />}
                 </h1>
                 {localTime && (
-                  <span className="type-caption text-xs text-slate-200 font-medium drop-shadow-sm mt-0.5 font-numeric">
+                  <span className="type-caption text-[10px] sm:text-xs text-white/70 font-medium drop-shadow-sm font-numeric">
                     Local time: {localTime}
                   </span>
                 )}
               </div>
             </div>
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              {isTemporary && (
+            <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+              {showAddButton && (
                 <motion.button 
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: tapScale }}
                   onClick={onSaveLocation}
-                  className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm shadow-lg shadow-sky-500/30 flex items-center gap-2 transition-all mr-2"
+                  className="px-3 py-2 sm:px-4 sm:py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-sky-500/30 flex items-center gap-1.5 sm:gap-2 transition-all h-9 sm:h-10"
                 >
-                  <ListPlus className="w-4 h-4" strokeWidth={2} />
+                  <ListPlus className="w-4 h-4" strokeWidth={2.5} />
                   <span>Add</span>
                 </motion.button>
               )}
               <motion.button 
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: tapScale }}
                 onClick={onSearchClick}
                 aria-label="Manage Cities"
-                className="p-2 rounded-full hover:bg-black/20 transition-colors"
+                className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
               >
-                <ListPlus className="w-6 h-6 text-white drop-shadow-md" strokeWidth={1.5} />
+                <ListPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2} />
               </motion.button>
               <motion.button 
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: tapScale }}
                 onClick={onToggleUnit}
                 aria-label="Toggle Temperature Unit"
-                className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-medium text-sm drop-shadow-md flex items-center gap-1.5 transition-colors"
+                className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-bold text-sm transition-colors"
               >
-                <Thermometer className="w-4 h-4" strokeWidth={1.5} />
-                <span>°{unit}</span>
+                °{unit}
               </motion.button>
             </div>
           </header>
@@ -405,6 +432,37 @@ export function WeatherPage({
               ) : null}
             </motion.div>
           </AnimatePresence>
+          {/* Embedded Pagination Indicators - Re-implemented at bottom with horizontal sync */}
+          {pagesCount > 1 && (
+            <div className="w-full flex justify-center items-center pt-4 pb-8 mt-2">
+              <div className="relative flex items-center space-x-4 px-4 py-2">
+                {Array.from({ length: pagesCount }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => onPageClick(i)}
+                    aria-label={i === 0 ? 'Current Location' : `City ${i}`}
+                    className="relative w-5 h-5 flex items-center justify-center transition-all duration-300 z-20"
+                  >
+                    {i === 0 ? (
+                      <MapPin 
+                        className={`w-3.5 h-3.5 transition-all duration-300 ${
+                          Math.abs(scrollProgress - i) < 0.5 ? 'text-white' : 'text-white/30'
+                        }`} 
+                        fill="none"
+                        strokeWidth={2.5}
+                      />
+                    ) : (
+                      <div className={`rounded-full transition-all duration-300 ${
+                        Math.abs(scrollProgress - i) < 0.5 
+                          ? 'w-2 h-2 bg-white' 
+                          : 'w-1.5 h-1.5 bg-white/30'
+                      }`} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

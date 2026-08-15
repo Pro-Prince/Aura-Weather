@@ -48,8 +48,8 @@ export function InstallPrompt() {
           className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:w-96"
         >
           <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center space-x-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center border border-white/10 shrink-0 shadow-md">
-              <CloudSun className="w-6 h-6 text-white" strokeWidth={1.5} />
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-white/10 shrink-0 shadow-md">
+              <img src="/weather_logo.png" alt="Aura Weather" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
             <div className="flex-1">
               <h3 className="text-slate-100 type-body-medium">Install Aura</h3>

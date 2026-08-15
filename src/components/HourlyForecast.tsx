@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { motion, useScroll, useMotionValue } from 'motion/react';
 import { getWeatherCodeDetails } from '../utils/weatherCodeMap';
 import { convertTemp, TempUnit } from '../utils/convertTemp';
 import { TempTrendChart } from './TempTrendChart';
@@ -61,12 +62,29 @@ export function HourlyForecast({ data, unit }: HourlyForecastProps) {
   const columnWidth = 64;
   const chartHeight = 80;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { scrollX } = useScroll({ container: scrollRef });
 
   // Mouse Drag to Scroll State
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(0);
   const dragDistance = useRef(0);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      setViewportWidth(scrollRef.current.clientWidth);
+      const observer = new ResizeObserver((entries) => {
+        if (entries[0]) setViewportWidth(entries[0].contentRect.width);
+      });
+      observer.observe(scrollRef.current);
+      return () => observer.disconnect();
+    }
+  }, []);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    // scrollX MotionValue is handled automatically by useScroll
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!scrollRef.current) return;
@@ -124,6 +142,7 @@ export function HourlyForecast({ data, unit }: HourlyForecastProps) {
   return (
     <div 
       ref={scrollRef}
+      onScroll={handleScroll}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUpOrLeave}
@@ -150,7 +169,10 @@ export function HourlyForecast({ data, unit }: HourlyForecastProps) {
           data={next24Hours.map(h => ({ temp: convertTemp(h.temp, unit) }))} 
           columnWidth={columnWidth} 
           height={chartHeight} 
-          resetKey={`${data.latitude}_${data.longitude}_${data.current?.time?.substring(0, 10)}`}
+          unit={unit}
+          resetKey={`${data.latitude}_${data.longitude}_${data.current?.time}_${unit}`}
+          scrollX={scrollX}
+          viewportWidth={viewportWidth}
         />
 
         {/* Hourly items (Icons & Labels) */}

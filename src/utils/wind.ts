@@ -14,6 +14,25 @@ export function getBeaufortForce(speedKmH: number): number {
   return 12;
 }
 
+export function getBeaufortDescription(force: number): string {
+  switch (force) {
+    case 0: return 'Calm';
+    case 1: return 'Light air';
+    case 2: return 'Light breeze';
+    case 3: return 'Gentle breeze';
+    case 4: return 'Moderate breeze';
+    case 5: return 'Fresh breeze';
+    case 6: return 'Strong breeze';
+    case 7: return 'High wind';
+    case 8: return 'Gale';
+    case 9: return 'Strong gale';
+    case 10: return 'Storm';
+    case 11: return 'Violent storm';
+    case 12: return 'Hurricane force';
+    default: return 'Breeze';
+  }
+}
+
 export function getWindDirection(degrees: number): string {
   const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
   const index = Math.round((degrees % 360) / 22.5);

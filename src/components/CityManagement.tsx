@@ -18,7 +18,7 @@ interface CityManagementProps {
   savedCities: LocationData[];
   currentLocation: LocationData;
   unit: TempUnit;
-  onSelectLocation: (loc: LocationData) => void;
+  onSelectLocation: (loc: LocationData, fromSearch: boolean) => void;
   onSaveLocation: (loc: LocationData) => void;
   isSaved: (name: string) => boolean;
   reorderCities: (cities: LocationData[]) => void;
@@ -95,6 +95,15 @@ function CityCard({
     return getWeatherVisualState(data?.current, data?.daily);
   }, [data?.current, data?.daily]);
 
+  // Calculate local time based on utc_offset_seconds
+  const localTime = useMemo(() => {
+    if (!data?.utc_offset_seconds && data?.utc_offset_seconds !== 0) return '';
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const cityTime = new Date(utc + (data.utc_offset_seconds * 1000));
+    return cityTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  }, [data?.utc_offset_seconds]);
+
   const isThunderstorm = codeDetails?.label?.toLowerCase().includes('thunder') || location.name === 'Seoul';
   const cardBgClass = isThunderstorm 
     ? 'bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950' 
@@ -112,66 +121,50 @@ function CityCard({
             onClick();
           }
         }}
-        className={`w-full relative h-32 rounded-2xl overflow-hidden flex items-center justify-between text-left shadow-xl ${cardBgClass} ${isEditMode ? 'pl-16 pr-20' : 'px-6'}`}
+        className={`w-full relative h-28 rounded-2xl overflow-hidden flex items-center justify-between text-left ${cardBgClass} ${isEditMode ? 'pl-14 pr-16' : 'px-5'}`}
       >
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
           <SkyBackground visualState={visualState} />
-          <div className="absolute inset-0 bg-black/30 pointer-events-none z-[1]" />
         </div>
         
         {isEditMode && (
            <div 
              className="absolute left-4 z-20 cursor-pointer p-2"
            >
-             {isSelected ? <CheckSquare className="w-6 h-6 text-sky-400" strokeWidth={1.5} /> : <Square className="w-6 h-6 text-slate-400" strokeWidth={1.5} />}
+             {isSelected ? <CheckSquare className="w-5 h-5 text-sky-400" strokeWidth={2} /> : <Square className="w-5 h-5 text-slate-400" strokeWidth={2} />}
            </div>
         )}
 
         <div className="flex flex-col z-10 h-full justify-center">
           <div className="flex items-center space-x-2">
-            <span className="type-city-title text-2xl text-white drop-shadow-md">{location.name}</span>
-            {isGeo && <MapPin className="w-5 h-5 text-white drop-shadow-md inline-block" strokeWidth={1.5} />}
+            <span className="type-city-title text-xl text-white drop-shadow-sm font-semibold">{location.name}</span>
+            {isGeo && <MapPin className="w-4 h-4 text-white drop-shadow-sm inline-block" strokeWidth={2} />}
           </div>
-          <div className="flex items-center space-x-2 mt-1 z-10">
-            <span className="type-body-medium text-slate-100 text-sm drop-shadow">{codeDetails?.label || 'Loading...'}</span>
-            <span className="type-body text-slate-200 text-sm drop-shadow">
-              {minTemp} ~ {maxTemp}&deg;{unit === 'C' ? 'C' : 'F'}
-            </span>
+          <div className="flex flex-col mt-0.5 z-10">
+            <span className="type-caption text-slate-100 text-xs drop-shadow-sm opacity-80">{localTime || 'Local time'}</span>
+            <span className="type-body-medium text-slate-100 text-sm drop-shadow-sm font-medium mt-1">{codeDetails?.label || 'Loading...'}</span>
           </div>
         </div>
         
-        <div className="z-10 type-stat-lg text-5xl sm:text-6xl text-white drop-shadow-lg font-medium">
-          {temp}&deg;{unit === 'C' ? 'C' : 'F'}
+        <div className="flex flex-col items-end z-10 h-full justify-center">
+          <div className="type-stat-lg text-4xl sm:text-5xl text-white drop-shadow-md font-bold">
+            {temp}&deg;
+          </div>
+          <div className="type-caption text-slate-100 text-xs drop-shadow-sm opacity-90 mt-1">
+            H:{maxTemp}&deg; L:{minTemp}&deg;
+          </div>
         </div>
 
         {isEditMode && !isGeo && (
            <div className="absolute right-2 z-20 flex flex-col space-y-1 items-center justify-center">
-             {onMoveUp && (
-               <button 
-                 onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
-                 className="p-1 bg-black/40 hover:bg-black/60 rounded text-white"
-                 title="Move up"
-               >
-                 ▲
-               </button>
-             )}
              {dragControls && (
                <div 
-                 className="text-slate-300 cursor-grab active:cursor-grabbing p-1"
+                 className="text-white cursor-grab active:cursor-grabbing p-2 bg-white/10 rounded-full"
                  onPointerDown={(e) => dragControls.start(e)}
                  title="Drag to reorder"
                >
-                 <GripVertical className="w-5 h-5" strokeWidth={1.5} />
+                 <GripVertical className="w-4 h-4" strokeWidth={2} />
                </div>
-             )}
-             {onMoveDown && (
-               <button 
-                 onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
-                 className="p-1 bg-black/40 hover:bg-black/60 rounded text-white"
-                 title="Move down"
-               >
-                 ▼
-               </button>
              )}
            </div>
         )}
@@ -183,7 +176,14 @@ function CityCard({
 function DraggableCityCard(props: any) {
   const controls = useDragControls();
   return (
-    <Reorder.Item value={props.location} id={props.location.name} dragListener={false} dragControls={controls}>
+    <Reorder.Item 
+      value={props.location} 
+      id={props.location.name} 
+      dragListener={false} 
+      dragControls={controls}
+      onDrag={(event, info) => props.onDragUpdate?.(info.point.y)}
+      onDragEnd={() => props.onDragUpdate?.(null)}
+    >
       <CityCard {...props} dragControls={controls} />
     </Reorder.Item>
   );
@@ -204,6 +204,8 @@ export function CityManagement({
   defaultSearchMode = false
 }: CityManagementProps) {
   const tapScale = useTapScale();
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const [dragY, setDragY] = useState<number | null>(null);
   const [isSearchMode, setIsSearchMode] = useState(defaultSearchMode);
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 50);
@@ -282,8 +284,12 @@ export function CityManagement({
       if (!isSaved(name) && name !== currentLocation.name) {
         onSaveLocation(loc);
       }
+      setIsSearchMode(false);
+      setIsAddMode(false);
+      setQuery('');
+      return;
     }
-    onSelectLocation(loc);
+    onSelectLocation(loc, true);
     setIsSearchMode(false);
     setIsAddMode(false);
     setQuery('');
@@ -353,110 +359,153 @@ export function CityManagement({
     return getWeatherVisualState(currentWeatherData?.current, currentWeatherData?.daily);
   }, [currentWeatherData?.current, currentWeatherData?.daily]);
 
+  useEffect(() => {
+    if (dragY === null || !scrollContainerRef.current) return;
+
+    let animationFrameId: number;
+    const scrollContainer = scrollContainerRef.current;
+    const threshold = 120; // Distance from top/bottom to start scrolling
+
+    const autoScroll = () => {
+      if (dragY === null) return;
+      
+      const rect = scrollContainer.getBoundingClientRect();
+      const relativeY = dragY - rect.top;
+      
+      if (relativeY < threshold) {
+        // Scroll up faster the closer it is to the edge
+        const speed = Math.min(15, (threshold - relativeY) / 4);
+        scrollContainer.scrollTop -= speed;
+      } else if (relativeY > rect.height - threshold) {
+        // Scroll down faster the closer it is to the edge
+        const speed = Math.min(15, (relativeY - (rect.height - threshold)) / 4);
+        scrollContainer.scrollTop += speed;
+      }
+      
+      animationFrameId = requestAnimationFrame(autoScroll);
+    };
+
+    animationFrameId = requestAnimationFrame(autoScroll);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [dragY]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black text-slate-100 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto hide-scrollbar pb-24 z-10 relative" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto hide-scrollbar pb-24 z-10 relative" 
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
         
         {/* Header */}
-        <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md px-4 pt-12 pb-4">
-          <div className="flex items-center justify-between mb-6">
-            {isEditMode ? (
-              <div className="flex items-center space-x-3">
-                <motion.button whileTap={{ scale: tapScale }} onClick={toggleSelectAll} className="p-1 rounded text-white">
-                  {selectedCities.size === localSavedCities.length + 1 ? <CheckSquare className="w-6 h-6 text-sky-400" strokeWidth={1.5} /> : <Square className="w-6 h-6 text-slate-300" strokeWidth={1.5} />}
-                </motion.button>
-                <h2 className="type-city-title text-2xl">Select items</h2>
-              </div>
-            ) : (
-              <div className="flex items-center">
-                <motion.button 
-                  whileTap={{ scale: tapScale }} 
-                  onClick={() => {
-                    if (isSearchMode) {
+        <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md">
+          <div className="max-w-2xl mx-auto px-4 pt-10 sm:pt-14 pb-4">
+            <div className="flex items-center justify-between mb-6">
+              {isEditMode ? (
+                <div className="flex items-center space-x-3">
+                  <motion.button whileTap={{ scale: tapScale }} onClick={toggleSelectAll} className="p-1 rounded text-white">
+                    {selectedCities.size === localSavedCities.length + 1 ? <CheckSquare className="w-6 h-6 text-sky-400" strokeWidth={2.2} /> : <Square className="w-6 h-6 text-slate-300" strokeWidth={2.2} />}
+                  </motion.button>
+                  <h2 className="type-city-title text-xl sm:text-2xl font-bold">Select items</h2>
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <motion.button 
+                    whileTap={{ scale: tapScale }} 
+                    onClick={() => {
+                      if (isSearchMode) {
+                        setIsSearchMode(false);
+                        setIsAddMode(false);
+                        setQuery('');
+                      } else {
+                        onClose();
+                      }
+                    }} 
+                    className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+                  >
+                    <ArrowLeft className="w-6 h-6 text-white" strokeWidth={2.2} />
+                  </motion.button>
+                  <h2 className="type-city-title text-xl sm:text-2xl font-bold ml-2">City management</h2>
+                </div>
+              )}
+
+              {!isSearchMode && (
+                <div className="flex items-center space-x-4">
+                  {!isEditMode && (
+                    <motion.button whileTap={{ scale: tapScale }} 
+                      onClick={() => {
+                        setIsAddMode(true);
+                        setIsSearchMode(true);
+                      }} 
+                      className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                      title="Add city"
+                    >
+                      <Plus className="w-5 h-5 text-white" strokeWidth={2.2} />
+                    </motion.button>
+                  )}
+                  <motion.button whileTap={{ scale: tapScale }} 
+                    onClick={() => {
+                      if (isEditMode) {
+                        setIsEditMode(false);
+                        setSelectedCities(new Set());
+                      } else {
+                        setIsEditMode(true);
+                      }
+                    }} 
+                    className="type-body-medium text-sky-400 font-bold px-2 py-1 text-base sm:text-lg"
+                  >
+                    {isEditMode ? 'Done' : 'Edit'}
+                  </motion.button>
+                </div>
+              )}
+            </div>
+
+            {!isEditMode && (
+              <div className="relative flex items-center mb-2">
+                <Search className="absolute left-4 w-5 h-5 text-slate-400" strokeWidth={2.2} />
+                <input
+                  type="text"
+                  placeholder="Search for a city..."
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    if (!isSearchMode) setIsSearchMode(true);
+                  }}
+                  onFocus={() => setIsSearchMode(true)}
+                  className="w-full bg-white/10 border border-white/5 rounded-2xl py-3.5 pl-12 pr-12 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all type-body text-base sm:text-lg"
+                />
+                {isSearchMode && (
+                  <motion.button 
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    whileTap={{ scale: tapScale }} 
+                    onClick={() => {
+                      setQuery('');
                       setIsSearchMode(false);
                       setIsAddMode(false);
-                      setQuery('');
-                    } else {
-                      onClose();
-                    }
-                  }} 
-                  className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
-                >
-                  <ArrowLeft className="w-6 h-6 text-white" strokeWidth={1.5} />
-                </motion.button>
-                <h2 className="type-city-title text-2xl ml-2">City management</h2>
+                    }} 
+                    className="absolute right-4 text-sky-400 font-bold type-body-medium text-base"
+                  >
+                    Cancel
+                  </motion.button>
+                )}
               </div>
             )}
 
-            {!isSearchMode && (
-              <div className="flex items-center space-x-2">
-                {!isEditMode && (
-                  <motion.button whileTap={{ scale: tapScale }} 
-                    onClick={() => {
-                      setIsAddMode(true);
-                      setIsSearchMode(true);
-                    }} 
-                    className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                    title="Add city"
-                  >
-                    <Plus className="w-6 h-6 text-slate-300" strokeWidth={1.5} />
-                  </motion.button>
-                )}
-                <motion.button whileTap={{ scale: tapScale }} 
-                  onClick={() => {
-                    setIsEditMode(!isEditMode);
-                    setSelectedCities(new Set());
-                  }} 
-                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                >
-                  {isEditMode ? <Check className="w-6 h-6 text-sky-400" strokeWidth={1.5} /> : <Edit2 className="w-6 h-6 text-slate-300" strokeWidth={1.5} />}
-                </motion.button>
+            {isEditMode && localSavedCities.length > 0 && (
+              <div className="flex items-center justify-end mt-2 px-2">
+                <span className="type-caption text-sm text-slate-400">{selectedCities.size} items selected</span>
               </div>
             )}
           </div>
-
-          {!isEditMode && (
-            <div className="relative flex items-center">
-              <Search className="absolute left-4 w-5 h-5 text-slate-400" strokeWidth={1.5} />
-              <input
-                type="text"
-                placeholder="Search for a city..."
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  if (!isSearchMode) setIsSearchMode(true);
-                }}
-                onFocus={() => setIsSearchMode(true)}
-                className="w-full bg-white/10 border-none rounded-full py-3.5 pl-12 pr-12 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all type-body text-lg"
-              />
-              {isSearchMode && (
-                <motion.button whileTap={{ scale: tapScale }} 
-                  onClick={() => {
-                    setQuery('');
-                    setIsSearchMode(false);
-                    setIsAddMode(false);
-                  }} 
-                  className="absolute right-4 text-slate-400 hover:text-white type-body-medium text-sm"
-                >
-                  Cancel
-                </motion.button>
-              )}
-            </div>
-          )}
-
-          {isEditMode && localSavedCities.length > 0 && (
-            <div className="flex items-center justify-end mt-2 px-2">
-              <span className="type-caption text-sm text-slate-400">{selectedCities.size} items selected</span>
-            </div>
-          )}
         </div>
 
         {/* Content */}
-        <div className="px-4 mt-2">
+        <div className="max-w-2xl mx-auto px-4 mt-4">
           {!isSearchMode ? (
-            <div className="flex flex-col">
+            <div className="flex flex-col animate-in fade-in duration-500">
               <CityCard 
                 location={currentLocation} 
                 isGeo={true} 
@@ -467,14 +516,14 @@ export function CityManagement({
                 onToggleSelect={() => toggleSelectCity(currentLocation.name)}
                 onClick={() => {
                   if (!isEditMode) {
-                    onSelectLocation(currentLocation);
+                    onSelectLocation(currentLocation, false);
                     onClose();
                   }
                 }} 
               />
               
               <Reorder.Group axis="y" values={localSavedCities} onReorder={handleReorder}>
-                {localSavedCities.map((city, index) => (
+                {localSavedCities.map((city) => (
                   <DraggableCityCard
                     key={city.name}
                     location={city} 
@@ -484,40 +533,49 @@ export function CityManagement({
                     isOpen={isOpen}
                     isSelected={selectedCities.has(city.name)}
                     onToggleSelect={() => toggleSelectCity(city.name)}
-                    onMoveUp={() => handleMoveUp(index)}
-                    onMoveDown={() => handleMoveDown(index)}
+                    onDragUpdate={(y: number | null) => setDragY(y)}
                     onClick={() => {
                       if (!isEditMode) {
-                        onSelectLocation(city);
+                        onSelectLocation(city, false);
                         onClose();
                       }
                     }} 
                   />
                 ))}
               </Reorder.Group>
-
             </div>
           ) : (
             <div className="flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
               {query.trim().length > 0 ? (
                 <div className="flex flex-col space-y-1 mt-4">
-                  {results.map(res => (
-                    <motion.button whileTap={{ scale: tapScale }}
-                      key={res.id}
-                      onClick={() => handleSelect(res.latitude, res.longitude, res.name)}
-                      className="flex flex-col text-left px-4 py-3 rounded-xl hover:bg-white/10 transition-colors border border-transparent"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Search className="w-4 h-4 text-slate-400" />
-                        <div className="flex flex-col">
-                          <span className="text-lg font-medium text-white leading-tight">{res.name}</span>
-                          <span className="text-xs text-slate-400 font-medium">
-                            {[res.admin1, res.country].filter(Boolean).join(', ')}
-                          </span>
+                  {results.map(res => {
+                    const saved = isSaved(res.name);
+                    return (
+                      <motion.button whileTap={{ scale: tapScale }}
+                        key={res.id}
+                        onClick={() => handleSelect(res.latitude, res.longitude, res.name)}
+                        className={`flex flex-col text-left px-4 py-3 rounded-2xl transition-colors border ${
+                          saved ? 'bg-white/10 border-white/20' : 'hover:bg-white/10 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center space-x-3">
+                            <Search className={`w-4 h-4 ${saved ? 'text-blue-400' : 'text-slate-400'}`} />
+                            <div className="flex flex-col">
+                              <span className="text-lg font-medium text-white leading-tight">
+                                {res.name}
+                                {saved && <span className="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full align-middle uppercase tracking-wider">Added</span>}
+                              </span>
+                              <span className="text-xs text-slate-400 font-medium">
+                                {[res.admin1, res.country].filter(Boolean).join(', ')}
+                              </span>
+                            </div>
+                          </div>
+                          {saved && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
                         </div>
-                      </div>
-                    </motion.button>
-                  ))}
+                      </motion.button>
+                    );
+                  })}
                   {!loading && results.length === 0 && (
                     <div className="text-slate-400 text-center py-8 flex flex-col items-center">
                       <Search className="w-8 h-8 mb-2 opacity-20" />
@@ -530,36 +588,54 @@ export function CityManagement({
                   <div>
                     <h3 className="type-eyebrow text-slate-400 mb-4">Popular domestic cities</h3>
                     <div className="flex flex-wrap gap-3">
-                      <motion.button whileTap={{ scale: tapScale }} 
-                        onClick={() => handleChipSelect({ name: currentLocation.name || 'Current Location', lat: currentLocation.lat, lon: currentLocation.lon })}
-                        className="px-4 py-2 bg-white/20 text-white rounded-full type-body-medium text-sm flex items-center gap-1.5 hover:bg-white/30 transition-colors border border-white/20"
-                      >
-                        <MapPin className="w-3.5 h-3.5" />
-                        {currentLocation.name || 'Current Location'}
-                      </motion.button>
-                      {popularDomestic.map(city => (
+                      {currentLocation.name && (
                         <motion.button whileTap={{ scale: tapScale }} 
-                          key={city.name}
-                          onClick={() => handleChipSelect(city)}
-                          className="px-4 py-2 bg-white/10 text-slate-200 rounded-full type-body-medium text-sm hover:bg-white/20 transition-colors"
+                          onClick={() => handleChipSelect({ name: currentLocation.name, lat: currentLocation.lat, lon: currentLocation.lon })}
+                          className="px-4 py-2 bg-white/20 text-white rounded-full type-body-medium text-sm flex items-center gap-1.5 hover:bg-white/30 transition-colors border border-white/20"
                         >
-                          {city.name}
+                          <MapPin className="w-3.5 h-3.5" />
+                          {currentLocation.name}
                         </motion.button>
-                      ))}
+                      )}
+                      {popularDomestic.map(city => {
+                        const saved = isSaved(city.name);
+                        return (
+                          <motion.button whileTap={{ scale: tapScale }} 
+                            key={city.name}
+                            onClick={() => handleChipSelect(city)}
+                            className={`px-4 py-2 rounded-full type-body-medium text-sm transition-colors flex items-center gap-1.5 ${
+                              saved 
+                                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                                : 'bg-white/10 text-slate-200 hover:bg-white/20'
+                            }`}
+                          >
+                            {city.name}
+                            {saved && <div className="w-1 h-1 rounded-full bg-blue-400" />}
+                          </motion.button>
+                        );
+                      })}
                     </div>
                   </div>
                   <div>
                     <h3 className="type-eyebrow text-slate-400 mb-4">Popular cities in the world</h3>
                     <div className="flex flex-wrap gap-3">
-                      {POPULAR_GLOBAL.map(city => (
-                        <motion.button whileTap={{ scale: tapScale }} 
-                          key={city.name}
-                          onClick={() => handleChipSelect(city)}
-                          className="px-4 py-2 bg-white/10 text-slate-200 rounded-full type-body-medium text-sm hover:bg-white/20 transition-colors"
-                        >
-                          {city.name}
-                        </motion.button>
-                      ))}
+                      {POPULAR_GLOBAL.map(city => {
+                        const saved = isSaved(city.name);
+                        return (
+                          <motion.button whileTap={{ scale: tapScale }} 
+                            key={city.name}
+                            onClick={() => handleChipSelect(city)}
+                            className={`px-4 py-2 rounded-full type-body-medium text-sm transition-colors flex items-center gap-1.5 ${
+                              saved 
+                                 ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                                 : 'bg-white/10 text-slate-200 hover:bg-white/20'
+                            }`}
+                          >
+                            {city.name}
+                            {saved && <div className="w-1 h-1 rounded-full bg-blue-400" />}
+                          </motion.button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
