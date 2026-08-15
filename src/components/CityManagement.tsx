@@ -180,6 +180,7 @@ function DraggableCityCard(props: any) {
     <Reorder.Item 
       value={props.location} 
       id={props.location.name} 
+      as="div"
       dragListener={false} 
       dragControls={controls}
       style={{ position: 'relative', touchAction: 'none' }}
