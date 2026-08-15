@@ -503,7 +503,7 @@ export function CityManagement({
         </div>
 
         {/* Content */}
-        <div className="max-w-2xl mx-auto px-4 mt-4">
+        <div className="max-w-2xl mx-auto px-4 mt-4 pb-12">
           {!isSearchMode ? (
             <div className="flex flex-col animate-in fade-in duration-500">
               <CityCard 

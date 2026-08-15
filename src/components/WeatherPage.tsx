@@ -432,8 +432,8 @@ export function WeatherPage({
               ) : null}
             </motion.div>
           </AnimatePresence>
-          {/* Embedded Pagination Indicators - Re-implemented at bottom with horizontal sync */}
-          {pagesCount > 1 && (
+          {/* Embedded Pagination Indicators or normal bottom spacing when single city */}
+          {pagesCount > 1 ? (
             <div className="w-full flex justify-center items-center pt-4 pb-8 mt-2">
               <div className="relative flex items-center space-x-4 px-4 py-2">
                 {Array.from({ length: pagesCount }).map((_, i) => (
@@ -462,6 +462,8 @@ export function WeatherPage({
                 ))}
               </div>
             </div>
+          ) : (
+            <div className="w-full pt-4 pb-8" aria-hidden="true" />
           )}
         </motion.div>
       </div>
