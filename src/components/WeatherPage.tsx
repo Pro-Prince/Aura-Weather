@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence, useReducedMotion, useTransform } from 'motion/react';
+import { motion, AnimatePresence, useTransform } from 'motion/react';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
-import { useTapScale, springTransition } from '../utils/motion';
-import { MapPinOff, RefreshCw, MapPin, ListPlus, Thermometer } from 'lucide-react';
+import { useTapScale, springTransition, useAppReducedMotion } from '../utils/motion';
+import { MapPinOff, RefreshCw, MapPin, ListPlus, Thermometer, ChevronLeft } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { CurrentWeather } from './CurrentWeather';
 import { ForecastSection } from './ForecastSection';
@@ -23,6 +23,7 @@ import { WeatherCanvas } from './WeatherCanvas';
 import { SkyBackground } from './SkyBackground';
 import { BackgroundErrorBoundary } from './BackgroundErrorBoundary';
 import { getWeatherVisualState } from '../utils/getWeatherVisualState';
+import defaultWeather from '../utils/defaultWeather.json';
 
 interface WeatherPageProps {
   key?: React.Key;
@@ -33,6 +34,9 @@ interface WeatherPageProps {
   isActive: boolean;
   onSearchClick: () => void;
   onToggleUnit?: () => void;
+  isTemporary?: boolean;
+  onSaveLocation?: () => void;
+  onBackToSearch?: () => void;
 }
 
 export function WeatherPage({
@@ -42,15 +46,47 @@ export function WeatherPage({
   unit,
   isActive,
   onSearchClick,
-  onToggleUnit
+  onToggleUnit,
+  isTemporary,
+  onSaveLocation,
+  onBackToSearch
 }: WeatherPageProps) {
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useAppReducedMotion();
   const tapScale = useTapScale();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const lat = isGeo ? geoData?.coordinates?.lat : location?.lat;
-  const lon = isGeo ? geoData?.coordinates?.lon : location?.lon;
+  useEffect(() => {
+    console.log(`[REDUCED MOTION DEBUG]
+      - useAppReducedMotion(): ${prefersReducedMotion}
+      - matchMedia('(prefers-reduced-motion: reduce)').matches: ${window.matchMedia('(prefers-reduced-motion: reduce)').matches}
+    `);
+  }, [prefersReducedMotion]);
+
+  const lat = isGeo ? (geoData?.coordinates?.lat ?? location?.lat) : location?.lat;
+  const lon = isGeo ? (geoData?.coordinates?.lon ?? location?.lon) : location?.lon;
   const displayName = location?.name || 'Current Location';
+
+  const [geoCityName, setGeoCityName] = useState<string>('');
+
+  useEffect(() => {
+    if (!isGeo || lat === undefined || lon === undefined || isNaN(Number(lat)) || isNaN(Number(lon))) {
+      return;
+    }
+    let isMounted = true;
+    fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`)
+      .then(res => res.ok ? res.json() : null)
+      .then(geoRes => {
+        if (!isMounted || !geoRes) return;
+        const name = geoRes.city || geoRes.locality || geoRes.principalSubdivision;
+        if (name) {
+          setGeoCityName(name);
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, [isGeo, lat, lon]);
+
+  const headerCityName = isGeo && geoCityName ? geoCityName : displayName;
 
   const activeCoordinates = useMemo(() => {
     if (lat !== undefined && lon !== undefined && lat !== null && lon !== null && !isNaN(Number(lat)) && !isNaN(Number(lon))) {
@@ -64,20 +100,17 @@ export function WeatherPage({
     false // Always allow fetching on mount so data is preloaded
   );
 
+  const activeData = data || (defaultWeather as any);
+
   const [localTime, setLocalTime] = useState<string>('');
 
   useEffect(() => {
-    if (isGeo) {
-      setLocalTime('');
-      return;
-    }
-
     const updateTime = () => {
       let timeStr = '';
-      if (data?.timezone) {
+      if (activeData?.timezone) {
         try {
           timeStr = new Date().toLocaleTimeString([], {
-            timeZone: data.timezone,
+            timeZone: activeData.timezone,
             hour: 'numeric',
             minute: '2-digit',
             hour12: true,
@@ -87,9 +120,9 @@ export function WeatherPage({
         }
       }
 
-      if (!timeStr && data?.utc_offset_seconds !== undefined) {
+      if (!timeStr && activeData?.utc_offset_seconds !== undefined) {
         try {
-          const utcOffsetSeconds = data.utc_offset_seconds;
+          const utcOffsetSeconds = activeData.utc_offset_seconds;
           const now = new Date();
           const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
           const cityDate = new Date(utcMs + (utcOffsetSeconds * 1000));
@@ -125,7 +158,7 @@ export function WeatherPage({
     updateTime();
     const interval = setInterval(updateTime, 10000);
     return () => clearInterval(interval);
-  }, [isGeo, data?.timezone, data?.utc_offset_seconds, location?.lon]);
+  }, [activeData?.timezone, activeData?.utc_offset_seconds, location?.lon]);
 
   const { pullY, isRefreshing } = usePullToRefresh(scrollRef, retry);
 
@@ -145,10 +178,10 @@ export function WeatherPage({
   let alertMessage: string | null = null;
   let eventId: string | null = null;
 
-  if (data?.minutely_15?.precipitation && data.current?.time) {
-    const timeArr = data.minutely_15.time;
-    const precipArr = data.minutely_15.precipitation;
-    const currentTime = data.current.time;
+  if (activeData?.minutely_15?.precipitation && activeData.current?.time) {
+    const timeArr = activeData.minutely_15.time;
+    const precipArr = activeData.minutely_15.precipitation;
+    const currentTime = activeData.current.time;
     
     let currentIndex = timeArr.indexOf(currentTime);
     if (currentIndex === -1 && currentTime) {
@@ -175,8 +208,8 @@ export function WeatherPage({
   const showAlert = alertMessage && eventId && eventId !== dismissedEventId;
 
   const visualState = useMemo(() => {
-    return getWeatherVisualState(data?.current, data?.daily);
-  }, [data?.current, data?.daily]);
+    return getWeatherVisualState(activeData?.current, activeData?.daily);
+  }, [activeData?.current, activeData?.daily]);
 
   return (
     <div className="w-full h-full shrink-0 snap-center relative overflow-hidden">
@@ -209,18 +242,41 @@ export function WeatherPage({
         >
           {/* Page Header in normal document flow - rendered exactly once per page, scrolls naturally */}
           <header className="w-full py-3 sm:py-5 flex items-center justify-between">
-            <div className="flex flex-col">
-              <h1 className="type-city-title text-2xl sm:text-3xl text-white drop-shadow-md flex items-center gap-2">
-                {displayName}
-                {isGeo && <MapPin className="w-5 h-5 text-white" strokeWidth={1.5} />}
-              </h1>
-              {!isGeo && localTime && (
-                <span className="type-caption text-xs text-slate-200 font-medium drop-shadow-sm mt-0.5 font-numeric">
-                  Local time: {localTime}
-                </span>
+            <div className="flex items-center space-x-3">
+              {isTemporary && (
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: tapScale }}
+                  onClick={onBackToSearch}
+                  className="p-2 -ml-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2} />
+                </motion.button>
               )}
+              <div className="flex flex-col">
+                <h1 className="type-city-title text-2xl sm:text-3xl text-white drop-shadow-md flex items-center gap-2">
+                  {headerCityName}
+                  {isGeo && <MapPin className="w-5 h-5 text-white" strokeWidth={1.5} />}
+                </h1>
+                {localTime && (
+                  <span className="type-caption text-xs text-slate-200 font-medium drop-shadow-sm mt-0.5 font-numeric">
+                    Local time: {localTime}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center space-x-1 sm:space-x-2">
+              {isTemporary && (
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: tapScale }}
+                  onClick={onSaveLocation}
+                  className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm shadow-lg shadow-sky-500/30 flex items-center gap-2 transition-all mr-2"
+                >
+                  <ListPlus className="w-4 h-4" strokeWidth={2} />
+                  <span>Add</span>
+                </motion.button>
+              )}
               <motion.button 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: tapScale }}
@@ -298,46 +354,10 @@ export function WeatherPage({
                     </motion.button>
                   </GlassCard>
                 </motion.div>
-              ) : (!data && isLoading) ? (
-                <motion.div variants={itemVariants} className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
-                  <GlassCard className="p-8 w-full flex flex-col items-center justify-center space-y-6 text-center">
-                    <motion.div
-                      animate={{ 
-                        rotate: 360,
-                        scale: [0.95, 1.05, 0.95]
-                      }}
-                      transition={{ 
-                        rotate: { repeat: Infinity, duration: 8, ease: "linear" },
-                        scale: { repeat: Infinity, duration: 2, ease: "easeInOut" }
-                      }}
-                      className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-sky-400 shadow-lg border border-white/10"
-                    >
-                      <RefreshCw className="w-8 h-8 animate-spin text-sky-400" strokeWidth={1.5} />
-                    </motion.div>
-                    <div className="space-y-2">
-                      <h2 className="type-section-header text-xl text-slate-100 tracking-wide">Retrieving weather</h2>
-                      <p className="type-body text-slate-400 text-sm">Fetching real-time forecast for {displayName}...</p>
-                    </div>
-                    <div className="w-full max-w-xs space-y-3 pt-4">
-                      <div className="h-4 bg-white/5 rounded-full animate-pulse w-3/4 mx-auto" />
-                      <div className="h-3 bg-white/5 rounded-full animate-pulse w-1/2 mx-auto" />
-                    </div>
-                  </GlassCard>
-                </motion.div>
-              ) : data ? (
-                <div className="flex flex-col space-y-8">
-                  {isCached && !weatherLoading && (
-                    <motion.div variants={itemVariants} className="flex justify-center -mb-4 z-10">
-                      <div className="flex items-center space-x-2 bg-amber-500/15 backdrop-blur-md px-4 py-1.5 rounded-full border border-amber-500/30 shadow-lg">
-                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                        <span className="type-caption text-xs font-semibold text-amber-200">
-                          Showing last known data (Offline)
-                        </span>
-                      </div>
-                    </motion.div>
-                  )}
+              ) : activeData ? (
+                <motion.div className="flex flex-col space-y-8">
                   <motion.div variants={itemVariants}>
-                    <CurrentWeather data={data} unit={unit} onToggleUnit={onToggleUnit} />
+                    <CurrentWeather data={activeData} unit={unit} onToggleUnit={onToggleUnit} />
                   </motion.div>
                   {showAlert && alertMessage && eventId && (
                     <motion.div variants={itemVariants} className="flex justify-center -mt-4 mb-4 z-10">
@@ -345,43 +365,43 @@ export function WeatherPage({
                     </motion.div>
                   )}
                   <motion.div variants={itemVariants}>
-                    <Nowcast data={data} />
+                    <Nowcast data={activeData} />
                   </motion.div>
                   <motion.div variants={itemVariants}>
-                    <AQICard data={data.air_quality} />
+                    <AQICard data={activeData.air_quality} />
                   </motion.div>
                   <motion.div variants={itemVariants}>
-                    <SunArcCard data={data} />
+                    <SunArcCard data={activeData} />
                   </motion.div>
                   <motion.div variants={itemVariants}>
-                    <ForecastSection data={data} unit={unit} />
+                    <ForecastSection data={activeData} unit={unit} />
                   </motion.div>
                   <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
                     <FeelsLikeCard 
-                      currentApparentTempC={data.current?.apparent_temperature ?? 0} 
+                      currentApparentTempC={activeData.current?.apparent_temperature ?? 0} 
                       unit={unit} 
                     />
                     <WindCard 
-                      windSpeedKmH={data.current?.wind_speed_10m ?? 0} 
-                      windDirectionDeg={data.current?.wind_direction_10m ?? 0} 
+                      windSpeedKmH={activeData.current?.wind_speed_10m ?? 0} 
+                      windDirectionDeg={activeData.current?.wind_direction_10m ?? 0} 
                     />
                     <HumidityCard 
-                      humidity={data.current?.relative_humidity_2m ?? 0} 
+                      humidity={activeData.current?.relative_humidity_2m ?? 0} 
                     />
                     <UVCard 
-                      uvIndex={data.current?.uv_index ?? 0} 
+                      uvIndex={activeData.current?.uv_index ?? 0} 
                     />
                     <VisibilityCard 
-                      visibilityMeters={data.current?.visibility ?? 0} 
+                      visibilityMeters={activeData.current?.visibility ?? 0} 
                     />
                     <PressureCard 
-                      pressureHpa={data.current?.surface_pressure ?? 1013} 
+                      pressureHpa={activeData.current?.surface_pressure ?? 1013} 
                     />
                   </motion.div>
                   <motion.div variants={itemVariants}>
-                    <LifeIndexGrid data={data} />
+                    <LifeIndexGrid data={activeData} />
                   </motion.div>
-                </div>
+                </motion.div>
               ) : null}
             </motion.div>
           </AnimatePresence>

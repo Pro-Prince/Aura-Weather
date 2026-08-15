@@ -33,7 +33,7 @@ interface SearchResult {
 export function SearchOverlay({ isOpen, onClose, onSelectLocation, onSaveLocation, isSaved }: SearchOverlayProps) {
   const tapScale = useTapScale();
   const [query, setQuery] = useState('');
-  const debouncedQuery = useDebounce(query, 400);
+  const debouncedQuery = useDebounce(query, 50);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

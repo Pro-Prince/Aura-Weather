@@ -19,7 +19,7 @@ export function WindCard({ windSpeedKmH, windDirectionDeg }: WindCardProps) {
         <span className="type-card-title text-[14px] font-medium text-white">Wind</span>
       </div>
 
-      <div className="flex-1 flex items-center justify-center relative my-2">
+      <div className="flex-1 flex items-center justify-center w-full relative my-2">
         <div className="w-20 h-20 rounded-full border border-dashed border-white/20 relative flex items-center justify-center">
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] text-slate-400 font-medium font-sans">N</span>
           <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[10px] text-slate-400 font-medium font-sans">S</span>

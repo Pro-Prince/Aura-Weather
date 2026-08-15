@@ -1,7 +1,9 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { motion, useAnimation } from 'motion/react';
 import { getWeatherCodeDetails } from '../utils/weatherCodeMap';
 import { convertTemp, TempUnit } from '../utils/convertTemp';
 import { AnimatedTemp } from './AnimatedTemp';
+import { useAppReducedMotion } from '../utils/motion';
 
 interface CurrentWeatherProps {
   data: any;
@@ -26,6 +28,39 @@ export function CurrentWeather({ data, unit, onToggleUnit }: CurrentWeatherProps
 
   const codeDetails = getWeatherCodeDetails(current.current?.weather_code ?? current.weather_code);
 
+  const lat = data.latitude ?? 0;
+  const lon = data.longitude ?? 0;
+  const cityKey = `${lat},${lon}`;
+
+  const prevCityKeyRef = useRef<string | null>(null);
+  const prevRawTempRef = useRef<number | null>(null);
+  const prevDataRef = useRef<any>(null);
+  const controls = useAnimation();
+
+  const prefersReducedMotion = useAppReducedMotion();
+
+  useEffect(() => {
+    if (prevCityKeyRef.current === cityKey) {
+      // Trigger whenever data reference changes while on the same city (i.e. on completed pull-to-refresh / refetch)
+      if (prevDataRef.current !== null && prevDataRef.current !== data) {
+        console.log(`[CurrentWeather] Refresh completed! Previous Raw Temp: ${prevRawTempRef.current ?? 'N/A'}, New Raw Temp: ${rawTemp}`);
+        
+        // Trigger subtle, premium visual update pulse!
+        controls.start({
+          scale: prefersReducedMotion ? [1, 1, 1] : [1, 1.03, 1],
+          opacity: [1, 0.45, 0.85, 1],
+          transition: {
+            duration: 0.45,
+            ease: "easeInOut"
+          }
+        });
+      }
+    }
+    prevCityKeyRef.current = cityKey;
+    prevRawTempRef.current = rawTemp;
+    prevDataRef.current = data;
+  }, [cityKey, data, rawTemp, controls, prefersReducedMotion]);
+
   return (
     <div className="flex flex-col w-full relative py-12">
 
@@ -48,18 +83,23 @@ export function CurrentWeather({ data, unit, onToggleUnit }: CurrentWeatherProps
         </p>
       </div>
 
-      {/* Giant Hero Temperature */}
+      {/* Giant Hero Temperature with visual pulse animation */}
       <div 
         onClick={onToggleUnit}
         title="Tap to toggle °C / °F"
         className={`flex justify-center items-start mt-8 ${onToggleUnit ? 'cursor-pointer select-none group' : ''}`}
       >
-        <span className="type-hero text-8xl sm:text-9xl text-white drop-shadow-xl transition-transform group-active:scale-95 duration-200">
-          <AnimatedTemp value={temp} />
-        </span>
-        <span className="font-sans font-medium text-4xl sm:text-5xl text-white/90 drop-shadow-lg mt-4 ml-1">
-          &deg;{unit}
-        </span>
+        <motion.div 
+          animate={controls}
+          className="flex items-start inline-flex origin-center"
+        >
+          <span className="type-hero text-8xl sm:text-9xl text-white drop-shadow-xl inline-block">
+            <AnimatedTemp value={temp} />
+          </span>
+          <span className="font-sans font-medium text-4xl sm:text-5xl text-white/90 drop-shadow-lg mt-4 ml-1">
+            &deg;{unit}
+          </span>
+        </motion.div>
       </div>
     </div>
   );

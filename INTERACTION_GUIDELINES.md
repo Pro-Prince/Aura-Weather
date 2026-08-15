@@ -6,7 +6,7 @@ Motion and cursor changes must always signal something real, never decoration al
 
 1. **Read-only data cards** (humidity, pressure, UV, visibility, air quality, life index, sun arc, feels-like, wind, nowcast):
    - `cursor: default`
-   - Restrained lift-and-brighten hover only
+   - Static in appearance regardless of cursor position (no hover state or motion)
    - No click behavior
 
 2. **Actionable controls** (unit toggle, search bar, add-city chips, delete/select actions, refresh/pull-to-refresh, View more/Collapse):

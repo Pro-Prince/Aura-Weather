@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VisualState } from '../utils/getWeatherVisualState';
-import { useReducedMotion } from 'motion/react';
+import { useAppReducedMotion } from '../utils/motion';
 
 const SKY_COLORS = {
   night: { top: [15, 23, 42], bottom: [30, 41, 59] }, 
@@ -21,7 +21,7 @@ const interpolateColor = (color1: number[], color2: number[], factor: number) =>
 
 export function SkyBackground({ visualState }: { visualState: VisualState }) {
   const { timeOfDayProgress, cloudOpacity, preset, isFreezing, isThunderstorm } = visualState;
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useAppReducedMotion();
   
   // Lightning flash state for thunderstorm
   const [flashOpacity, setFlashOpacity] = useState(0);

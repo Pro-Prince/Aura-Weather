@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { motion, useSpring, useTransform, useMotionValue, useReducedMotion } from 'motion/react';
+import { motion, useSpring, useTransform, useMotionValue } from 'motion/react';
+import { useAppReducedMotion } from '../utils/motion';
 
 export function AnimatedTemp({ value }: { value: number | string }) {
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useAppReducedMotion();
   const [hasAnimated, setHasAnimated] = useState(false);
   
   const numericValue = typeof value === 'number' ? value : parseFloat(value as string);
@@ -21,19 +22,9 @@ export function AnimatedTemp({ value }: { value: number | string }) {
 
   useEffect(() => {
     if (isNumeric) {
-      if (!hasAnimated && !prefersReducedMotion) {
-        motionValue.set(0);
-        // Small delay to ensure it renders at 0 first
-        const timeout = setTimeout(() => {
-          motionValue.set(numericValue);
-          setHasAnimated(true);
-        }, 50);
-        return () => clearTimeout(timeout);
-      } else {
-        motionValue.set(numericValue);
-      }
+      motionValue.set(numericValue);
     }
-  }, [numericValue, isNumeric, hasAnimated, prefersReducedMotion, motionValue]);
+  }, [numericValue, isNumeric, motionValue]);
 
   if (!isNumeric) {
     return <span>{value}</span>;

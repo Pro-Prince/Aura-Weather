@@ -1,17 +1,30 @@
 import { useState, useEffect } from 'react';
 import { LocationData } from '../components/SearchOverlay';
 
-export function useSavedCities() {
-  const [savedCities, setSavedCities] = useState<LocationData[]>([]);
+const DEFAULT_CITIES: LocationData[] = [
+  { name: 'Raysan', lat: 23.235, lon: 72.645 },
+  { name: 'Chikhli', lat: 20.756, lon: 73.067 },
+  { name: 'Seoul', lat: 37.5665, lon: 126.9780 }
+];
 
-  useEffect(() => {
+export function useSavedCities() {
+  const [savedCities, setSavedCities] = useState<LocationData[]>(() => {
     const saved = localStorage.getItem('aura-saved-cities');
     if (saved) {
       try {
-        setSavedCities(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {
         console.error('Failed to parse saved cities');
       }
+    }
+    return DEFAULT_CITIES;
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem('aura-saved-cities');
+    if (!saved) {
+      localStorage.setItem('aura-saved-cities', JSON.stringify(DEFAULT_CITIES));
     }
   }, []);
 

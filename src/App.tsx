@@ -123,8 +123,10 @@ function AppContent() {
   const { savedCities, addCity, removeCity, removeCities, reorderCities, isSaved } = useSavedCities();
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchDefaultMode, setSearchDefaultMode] = useState(false);
   const [unit, setUnit] = useState<TempUnit>('C');
   const [countryCode, setCountryCode] = useState(() => inferCountryCodeFromTimezone());
+  const [currentCityName, setCurrentCityName] = useState<string>('Current Location');
   
   const [activeIndex, setActiveIndex] = useState(0);
   const [temporaryCity, setTemporaryCity] = useState<LocationData | null>(null);
@@ -144,20 +146,40 @@ function AppContent() {
 
   useEffect(() => {
     if (lat === undefined || lon === undefined || isNaN(Number(lat)) || isNaN(Number(lon))) return;
-    const fetchCountry = async () => {
+    const fetchLocationInfo = async () => {
       try {
         const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
         if (res.ok) {
           const data = await res.json();
+          if (data.city || data.locality || data.principalSubdivision) {
+            setCurrentCityName(data.city || data.locality || data.principalSubdivision);
+          }
           if (data.countryCode) {
             setCountryCode(prev => prev === data.countryCode.toUpperCase() ? prev : data.countryCode.toUpperCase());
           }
         }
       } catch (e) {
-        console.warn('Reverse geocoding failed, falling back to timezone:', e);
+        console.warn('Reverse geocoding failed:', e);
       }
     };
-    fetchCountry();
+    fetchLocationInfo();
+  }, [lat, lon]);
+
+  const geoCoords = useMemo(() => {
+    if (lat !== undefined && lon !== undefined && lat !== null && lon !== null && !isNaN(Number(lat)) && !isNaN(Number(lon))) {
+      return { lat: Number(lat), lon: Number(lon) };
+    }
+    try {
+      const lastWeather = localStorage.getItem('aura-last-weather');
+      if (lastWeather) {
+        const parsed = JSON.parse(lastWeather);
+        if (parsed && typeof parsed.latitude === 'number' && typeof parsed.longitude === 'number') {
+          return { lat: parsed.latitude, lon: parsed.longitude };
+        }
+      }
+    } catch (e) {}
+    // Default to London coordinates
+    return { lat: 51.5074, lon: -0.1278 };
   }, [lat, lon]);
 
   const toggleUnit = () => {
@@ -170,7 +192,7 @@ function AppContent() {
 
   const pages = useMemo(() => {
     const list = [
-      { id: 'geo', isGeo: true, location: { name: geo.isFallback ? 'London' : 'Current Location', lat, lon } },
+      { id: 'geo', isGeo: true, location: { name: geo.isFallback ? 'London' : currentCityName, lat: geoCoords.lat, lon: geoCoords.lon } },
       ...savedCities.map(c => ({ id: c.name, isGeo: false, location: c }))
     ];
 
@@ -258,8 +280,23 @@ function AppContent() {
             geoData={geo}
             unit={unit}
             isActive={activeIndex === index}
-            onSearchClick={() => setIsSearchOpen(true)}
+            onSearchClick={() => {
+              setSearchDefaultMode(false);
+              setIsSearchOpen(true);
+            }}
             onToggleUnit={toggleUnit}
+            isTemporary={temporaryCity?.name === page.id}
+            onSaveLocation={() => {
+              if (temporaryCity) {
+                addCity(temporaryCity);
+                setTemporaryCity(null);
+              }
+            }}
+            onBackToSearch={() => {
+              setTemporaryCity(null);
+              setSearchDefaultMode(true);
+              setIsSearchOpen(true);
+            }}
           />
         ))}
       </motion.div>
@@ -307,7 +344,10 @@ function AppContent() {
 
       <CityManagement 
         isOpen={isSearchOpen} 
-        onClose={() => setIsSearchOpen(false)}
+        onClose={() => {
+          setIsSearchOpen(false);
+          setSearchDefaultMode(false);
+        }}
         savedCities={savedCities}
         currentLocation={pages[0].location as LocationData}
         unit={unit}
@@ -321,6 +361,7 @@ function AppContent() {
         }}
         isSaved={isSaved}
         popularDomestic={popularDomestic}
+        defaultSearchMode={searchDefaultMode}
       />
     </div>
   );

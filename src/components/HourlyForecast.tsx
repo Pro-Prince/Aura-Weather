@@ -150,6 +150,7 @@ export function HourlyForecast({ data, unit }: HourlyForecastProps) {
           data={next24Hours.map(h => ({ temp: convertTemp(h.temp, unit) }))} 
           columnWidth={columnWidth} 
           height={chartHeight} 
+          resetKey={`${data.latitude}_${data.longitude}_${data.current?.time?.substring(0, 10)}`}
         />
 
         {/* Hourly items (Icons & Labels) */}

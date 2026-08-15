@@ -24,27 +24,21 @@ export function ForecastSection({ data, unit }: ForecastSectionProps) {
       <DailyForecast data={data} unit={unit} isExpanded={isExpanded} />
       
       <div className="pt-2 flex justify-center border-t border-white/10">
-        {!isExpanded ? (
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: tapScale }}
-            onClick={() => setIsExpanded(true)}
-            className="px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-medium flex items-center gap-2 backdrop-blur-md transition-colors shadow-sm"
+        <motion.button 
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: tapScale }}
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="px-6 py-2.5 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 text-white text-xs font-semibold flex items-center gap-2 backdrop-blur-xl shadow-lg transition-all duration-300 cursor-pointer"
+        >
+          <span>{isExpanded ? 'Collapse' : 'View more'}</span>
+          <motion.div
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="flex items-center justify-center"
           >
-            <span>View more</span>
             <ChevronDown className="w-4 h-4" />
-          </motion.button>
-        ) : (
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: tapScale }}
-            onClick={() => setIsExpanded(false)}
-            className="px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-medium flex items-center gap-2 backdrop-blur-md transition-colors shadow-sm"
-          >
-            <span>Collapse</span>
-            <ChevronUp className="w-4 h-4" />
-          </motion.button>
-        )}
+          </motion.div>
+        </motion.button>
       </div>
     </GlassCard>
   );

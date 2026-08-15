@@ -29,12 +29,14 @@ export function FeelsLikeCard({ currentApparentTempC, unit }: FeelsLikeCardProps
         <span className="type-card-title text-[14px] font-medium text-white">Feels like</span>
       </div>
 
-      <div className="w-full my-auto py-2 relative">
-        <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-blue-500 via-yellow-400 to-red-500" />
-        <div 
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md border border-slate-200"
-          style={{ left: `calc(${percentage}% - 6px)` }}
-        />
+      <div className="flex-1 flex items-center justify-center w-full relative my-2">
+        <div className="w-full relative py-2">
+          <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-blue-500 via-yellow-400 to-red-500" />
+          <div 
+            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md border border-slate-200"
+            style={{ left: `calc(${percentage}% - 6px)` }}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col mt-auto pt-2">

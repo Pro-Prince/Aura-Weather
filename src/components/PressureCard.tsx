@@ -26,7 +26,7 @@ export function PressureCard({ pressureHpa }: PressureCardProps) {
         <span className="type-card-title text-[14px] font-medium text-white">Pressure</span>
       </div>
 
-      <div className="flex-1 flex items-center justify-center relative my-2">
+      <div className="flex-1 flex items-center justify-center w-full relative my-2">
         {/* Semi-circle Gauge */}
         <div className="relative w-24 h-12 overflow-hidden flex justify-center">
           <div className="absolute top-0 w-24 h-24 rounded-full border-[5px] border-white/10" />

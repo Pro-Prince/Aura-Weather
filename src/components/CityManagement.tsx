@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Search, MapPin, X, Plus, Edit2, Check, GripVertical, Trash2, Square, CheckSquare } from 'lucide-react';
 import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react';
 import { LocationData } from './SearchOverlay';
@@ -9,6 +9,8 @@ import { TempUnit, convertTemp } from '../utils/convertTemp';
 import { useDebounce } from '../hooks/useDebounce';
 import { GlassCard } from './GlassCard';
 import { useTapScale, springTransition } from '../utils/motion';
+import { SkyBackground } from './SkyBackground';
+import { getWeatherVisualState } from '../utils/getWeatherVisualState';
 
 interface CityManagementProps {
   isOpen: boolean;
@@ -22,6 +24,7 @@ interface CityManagementProps {
   reorderCities: (cities: LocationData[]) => void;
   removeCities: (names: string[]) => void;
   popularDomestic?: { name: string; lat: number; lon: number }[];
+  defaultSearchMode?: boolean;
 }
 
 interface SearchResult {
@@ -61,7 +64,9 @@ function CityCard({
   isSelected,
   onToggleSelect,
   dragControls,
-  isOpen = false
+  isOpen = false,
+  onMoveUp,
+  onMoveDown
 }: { 
   location: LocationData, 
   isGeo: boolean, 
@@ -71,9 +76,11 @@ function CityCard({
   isSelected?: boolean,
   onToggleSelect?: () => void,
   dragControls?: any,
-  isOpen?: boolean
+  isOpen?: boolean,
+  onMoveUp?: () => void,
+  onMoveDown?: () => void
 }) {
-  const { data, loading } = useWeather(location, !isOpen);
+  const { data, loading } = useWeather(location, false);
   
   const rawTemp = data?.current?.temperature_2m;
   const rawMin = data?.daily?.temperature_2m_min?.[0];
@@ -84,6 +91,15 @@ function CityCard({
   const maxTemp = rawMax !== undefined ? Math.round(convertTemp(rawMax, unit)) : '--';
   const codeDetails = data ? getWeatherCodeDetails(data.current?.weather_code ?? 0) : null;
 
+  const visualState = useMemo(() => {
+    return getWeatherVisualState(data?.current, data?.daily);
+  }, [data?.current, data?.daily]);
+
+  const isThunderstorm = codeDetails?.label?.toLowerCase().includes('thunder') || location.name === 'Seoul';
+  const cardBgClass = isThunderstorm 
+    ? 'bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950' 
+    : 'bg-gradient-to-r from-sky-400 via-blue-500 to-sky-500';
+
   return (
     <div className="relative group w-full mb-4">
       <motion.div
@@ -91,18 +107,19 @@ function CityCard({
         whileTap={!isEditMode ? { scale: 0.98 } : {}}
         onClick={() => {
           if (isEditMode) {
-            if (!isGeo && onToggleSelect) onToggleSelect();
+            if (onToggleSelect) onToggleSelect();
           } else {
             onClick();
           }
         }}
-        className={`w-full relative h-32 rounded-2xl overflow-hidden flex items-center justify-between text-left shadow-xl border border-white/10 app-card-hover ${isEditMode && !isGeo ? 'pl-16 pr-14' : 'px-6'}`}
+        className={`w-full relative h-32 rounded-2xl overflow-hidden flex items-center justify-between text-left shadow-xl ${cardBgClass} ${isEditMode ? 'pl-16 pr-20' : 'px-6'}`}
       >
-        <div className="absolute inset-0 bg-slate-900 -z-20" />
-
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-black/70 -z-10" />
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+          <SkyBackground visualState={visualState} />
+          <div className="absolute inset-0 bg-black/30 pointer-events-none z-[1]" />
+        </div>
         
-        {isEditMode && !isGeo && (
+        {isEditMode && (
            <div 
              className="absolute left-4 z-20 cursor-pointer p-2"
            >
@@ -113,26 +130,49 @@ function CityCard({
         <div className="flex flex-col z-10 h-full justify-center">
           <div className="flex items-center space-x-2">
             <span className="type-city-title text-2xl text-white drop-shadow-md">{location.name}</span>
-            {isGeo && <MapPin className="w-5 h-5 text-white drop-shadow-md" strokeWidth={1.5} />}
+            {isGeo && <MapPin className="w-5 h-5 text-white drop-shadow-md inline-block" strokeWidth={1.5} />}
           </div>
-          <div>
-            <p className="type-body-medium text-slate-200 text-base drop-shadow">{codeDetails?.label || 'Loading...'}</p>
-            <p className="type-body text-slate-300 text-sm drop-shadow">
-              H:<span className="font-numeric font-medium">{maxTemp}</span>&deg; L:<span className="font-numeric font-medium">{minTemp}</span>&deg;
-            </p>
+          <div className="flex items-center space-x-2 mt-1 z-10">
+            <span className="type-body-medium text-slate-100 text-sm drop-shadow">{codeDetails?.label || 'Loading...'}</span>
+            <span className="type-body text-slate-200 text-sm drop-shadow">
+              {minTemp} ~ {maxTemp}&deg;{unit === 'C' ? 'C' : 'F'}
+            </span>
           </div>
         </div>
         
-        <div className="z-10 type-stat-lg text-6xl text-white drop-shadow-lg">
-          {temp}&deg;
+        <div className="z-10 type-stat-lg text-5xl sm:text-6xl text-white drop-shadow-lg font-medium">
+          {temp}&deg;{unit === 'C' ? 'C' : 'F'}
         </div>
 
-        {isEditMode && !isGeo && dragControls && (
-           <div 
-             className="absolute right-2 z-20 text-slate-400 cursor-grab active:cursor-grabbing p-2"
-             onPointerDown={(e) => dragControls.start(e)}
-           >
-             <GripVertical className="w-6 h-6" strokeWidth={1.5} />
+        {isEditMode && !isGeo && (
+           <div className="absolute right-2 z-20 flex flex-col space-y-1 items-center justify-center">
+             {onMoveUp && (
+               <button 
+                 onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+                 className="p-1 bg-black/40 hover:bg-black/60 rounded text-white"
+                 title="Move up"
+               >
+                 ▲
+               </button>
+             )}
+             {dragControls && (
+               <div 
+                 className="text-slate-300 cursor-grab active:cursor-grabbing p-1"
+                 onPointerDown={(e) => dragControls.start(e)}
+                 title="Drag to reorder"
+               >
+                 <GripVertical className="w-5 h-5" strokeWidth={1.5} />
+               </div>
+             )}
+             {onMoveDown && (
+               <button 
+                 onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+                 className="p-1 bg-black/40 hover:bg-black/60 rounded text-white"
+                 title="Move down"
+               >
+                 ▼
+               </button>
+             )}
            </div>
         )}
       </motion.div>
@@ -160,16 +200,18 @@ export function CityManagement({
   isSaved, 
   reorderCities, 
   removeCities,
-  popularDomestic = POPULAR_DOMESTIC 
+  popularDomestic = POPULAR_DOMESTIC,
+  defaultSearchMode = false
 }: CityManagementProps) {
   const tapScale = useTapScale();
-  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(defaultSearchMode);
   const [query, setQuery] = useState('');
-  const debouncedQuery = useDebounce(query, 400);
+  const debouncedQuery = useDebounce(query, 50);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isAddMode, setIsAddMode] = useState(false);
   const [selectedCities, setSelectedCities] = useState<Set<string>>(new Set());
 
   // Use a local copy of saved cities for reordering
@@ -190,12 +232,15 @@ export function CityManagement({
   useEffect(() => {
     if (!isOpen) {
       setIsSearchMode(false);
+      setIsAddMode(false);
       setQuery('');
       setResults([]);
       setIsEditMode(false);
       setSelectedCities(new Set());
+    } else if (defaultSearchMode) {
+      setIsSearchMode(true);
     }
-  }, [isOpen]);
+  }, [isOpen, defaultSearchMode]);
 
   useEffect(() => {
     if (!debouncedQuery.trim()) {
@@ -212,8 +257,10 @@ export function CityManagement({
         if (!abortController.signal.aborted) {
           setResults(results);
         }
-      } catch (err) {
-        console.error('CityManagement search error:', err);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error('CityManagement search error:', err);
+        }
       } finally {
         if (!abortController.signal.aborted) {
           setLoading(false);
@@ -230,11 +277,15 @@ export function CityManagement({
 
   const handleSelect = (lat: number, lon: number, name: string) => {
     const loc = { lat, lon, name };
-    if (!isSaved(name) && name !== currentLocation.name) {
-      onSaveLocation(loc);
+    // If in add mode or explicitly adding, save to saved cities
+    if (isAddMode) {
+      if (!isSaved(name) && name !== currentLocation.name) {
+        onSaveLocation(loc);
+      }
     }
     onSelectLocation(loc);
     setIsSearchMode(false);
+    setIsAddMode(false);
     setQuery('');
     onClose();
   };
@@ -253,16 +304,20 @@ export function CityManagement({
   };
 
   const toggleSelectAll = () => {
-    if (selectedCities.size === localSavedCities.length) {
+    const allNames = [currentLocation.name, ...localSavedCities.map(c => c.name)];
+    if (selectedCities.size === allNames.length) {
       setSelectedCities(new Set());
     } else {
-      setSelectedCities(new Set(localSavedCities.map(c => c.name)));
+      setSelectedCities(new Set(allNames));
     }
   };
 
   const handleDelete = () => {
     if (selectedCities.size > 0) {
-      removeCities(Array.from(selectedCities));
+      const namesToDelete = Array.from(selectedCities).filter(n => n !== currentLocation.name);
+      if (namesToDelete.length > 0) {
+        removeCities(namesToDelete);
+      }
       setSelectedCities(new Set());
       setIsEditMode(false);
     }
@@ -273,31 +328,92 @@ export function CityManagement({
     reorderCities(newOrder);
   };
 
+  const handleMoveUp = (index: number) => {
+    if (index <= 0) return;
+    const updated = [...localSavedCities];
+    const temp = updated[index];
+    updated[index] = updated[index - 1];
+    updated[index - 1] = temp;
+    setLocalSavedCities(updated);
+    reorderCities(updated);
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (index >= localSavedCities.length - 1) return;
+    const updated = [...localSavedCities];
+    const temp = updated[index];
+    updated[index] = updated[index + 1];
+    updated[index + 1] = temp;
+    setLocalSavedCities(updated);
+    reorderCities(updated);
+  };
+
+  const { data: currentWeatherData } = useWeather(currentLocation, false);
+  const currentVisualState = useMemo(() => {
+    return getWeatherVisualState(currentWeatherData?.current, currentWeatherData?.daily);
+  }, [currentWeatherData?.current, currentWeatherData?.daily]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black text-slate-100 flex flex-col">
-      <div className="flex-1 overflow-y-auto hide-scrollbar pb-24" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+    <div className="fixed inset-0 z-50 bg-black text-slate-100 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto hide-scrollbar pb-24 z-10 relative" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         
         {/* Header */}
         <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md px-4 pt-12 pb-4">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
-              <motion.button whileTap={{ scale: tapScale }} onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
-                <ArrowLeft className="w-6 h-6 text-white" strokeWidth={1.5} />
-              </motion.button>
-              <h2 className="type-city-title text-2xl ml-2">City management</h2>
-            </div>
-            {!isSearchMode && savedCities.length > 0 && (
-              <motion.button whileTap={{ scale: tapScale }} 
-                onClick={() => {
-                  setIsEditMode(!isEditMode);
-                  setSelectedCities(new Set());
-                }} 
-                className="p-2 rounded-full hover:bg-white/10 transition-colors"
-              >
-                {isEditMode ? <Check className="w-6 h-6 text-sky-400" strokeWidth={1.5} /> : <Edit2 className="w-6 h-6 text-slate-300" strokeWidth={1.5} />}
-              </motion.button>
+            {isEditMode ? (
+              <div className="flex items-center space-x-3">
+                <motion.button whileTap={{ scale: tapScale }} onClick={toggleSelectAll} className="p-1 rounded text-white">
+                  {selectedCities.size === localSavedCities.length + 1 ? <CheckSquare className="w-6 h-6 text-sky-400" strokeWidth={1.5} /> : <Square className="w-6 h-6 text-slate-300" strokeWidth={1.5} />}
+                </motion.button>
+                <h2 className="type-city-title text-2xl">Select items</h2>
+              </div>
+            ) : (
+              <div className="flex items-center">
+                <motion.button 
+                  whileTap={{ scale: tapScale }} 
+                  onClick={() => {
+                    if (isSearchMode) {
+                      setIsSearchMode(false);
+                      setIsAddMode(false);
+                      setQuery('');
+                    } else {
+                      onClose();
+                    }
+                  }} 
+                  className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+                >
+                  <ArrowLeft className="w-6 h-6 text-white" strokeWidth={1.5} />
+                </motion.button>
+                <h2 className="type-city-title text-2xl ml-2">City management</h2>
+              </div>
+            )}
+
+            {!isSearchMode && (
+              <div className="flex items-center space-x-2">
+                {!isEditMode && (
+                  <motion.button whileTap={{ scale: tapScale }} 
+                    onClick={() => {
+                      setIsAddMode(true);
+                      setIsSearchMode(true);
+                    }} 
+                    className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                    title="Add city"
+                  >
+                    <Plus className="w-6 h-6 text-slate-300" strokeWidth={1.5} />
+                  </motion.button>
+                )}
+                <motion.button whileTap={{ scale: tapScale }} 
+                  onClick={() => {
+                    setIsEditMode(!isEditMode);
+                    setSelectedCities(new Set());
+                  }} 
+                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                >
+                  {isEditMode ? <Check className="w-6 h-6 text-sky-400" strokeWidth={1.5} /> : <Edit2 className="w-6 h-6 text-slate-300" strokeWidth={1.5} />}
+                </motion.button>
+              </div>
             )}
           </div>
 
@@ -320,6 +436,7 @@ export function CityManagement({
                   onClick={() => {
                     setQuery('');
                     setIsSearchMode(false);
+                    setIsAddMode(false);
                   }} 
                   className="absolute right-4 text-slate-400 hover:text-white type-body-medium text-sm"
                 >
@@ -330,12 +447,8 @@ export function CityManagement({
           )}
 
           {isEditMode && localSavedCities.length > 0 && (
-            <div className="flex items-center justify-between mt-2 px-2">
-              <motion.button whileTap={{ scale: tapScale }} onClick={toggleSelectAll} className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors">
-                {selectedCities.size === localSavedCities.length ? <CheckSquare className="w-5 h-5 text-sky-400" strokeWidth={1.5} /> : <Square className="w-5 h-5 text-slate-400" strokeWidth={1.5} />}
-                <span className="type-body-medium text-sm">Select all</span>
-              </motion.button>
-              <span className="type-caption text-sm text-slate-400">{selectedCities.size} selected</span>
+            <div className="flex items-center justify-end mt-2 px-2">
+              <span className="type-caption text-sm text-slate-400">{selectedCities.size} items selected</span>
             </div>
           )}
         </div>
@@ -350,6 +463,8 @@ export function CityManagement({
                 unit={unit} 
                 isEditMode={isEditMode}
                 isOpen={isOpen}
+                isSelected={selectedCities.has(currentLocation.name)}
+                onToggleSelect={() => toggleSelectCity(currentLocation.name)}
                 onClick={() => {
                   if (!isEditMode) {
                     onSelectLocation(currentLocation);
@@ -359,7 +474,7 @@ export function CityManagement({
               />
               
               <Reorder.Group axis="y" values={localSavedCities} onReorder={handleReorder}>
-                {localSavedCities.map((city) => (
+                {localSavedCities.map((city, index) => (
                   <DraggableCityCard
                     key={city.name}
                     location={city} 
@@ -369,6 +484,8 @@ export function CityManagement({
                     isOpen={isOpen}
                     isSelected={selectedCities.has(city.name)}
                     onToggleSelect={() => toggleSelectCity(city.name)}
+                    onMoveUp={() => handleMoveUp(index)}
+                    onMoveDown={() => handleMoveDown(index)}
                     onClick={() => {
                       if (!isEditMode) {
                         onSelectLocation(city);
@@ -383,19 +500,30 @@ export function CityManagement({
           ) : (
             <div className="flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
               {query.trim().length > 0 ? (
-                <div className="flex flex-col space-y-2 mt-4">
-                  {loading && <div className="text-slate-400 text-center py-4">Searching...</div>}
-                  {!loading && results.length === 0 && <div className="text-slate-400 text-center py-4">No results found</div>}
+                <div className="flex flex-col space-y-1 mt-4">
                   {results.map(res => (
                     <motion.button whileTap={{ scale: tapScale }}
                       key={res.id}
                       onClick={() => handleSelect(res.latitude, res.longitude, res.name)}
-                      className="flex flex-col text-left p-4 rounded-2xl hover:bg-white/10 transition-colors border border-transparent hover:border-white/10"
+                      className="flex flex-col text-left px-4 py-3 rounded-xl hover:bg-white/10 transition-colors border border-transparent"
                     >
-                      <span className="text-lg font-medium text-white">{res.name}</span>
-                      <span className="text-sm text-slate-400">{[res.admin1, res.country].filter(Boolean).join(', ')}</span>
+                      <div className="flex items-center space-x-3">
+                        <Search className="w-4 h-4 text-slate-400" />
+                        <div className="flex flex-col">
+                          <span className="text-lg font-medium text-white leading-tight">{res.name}</span>
+                          <span className="text-xs text-slate-400 font-medium">
+                            {[res.admin1, res.country].filter(Boolean).join(', ')}
+                          </span>
+                        </div>
+                      </div>
                     </motion.button>
                   ))}
+                  {!loading && results.length === 0 && (
+                    <div className="text-slate-400 text-center py-8 flex flex-col items-center">
+                      <Search className="w-8 h-8 mb-2 opacity-20" />
+                      <p className="type-body">No results found for "{query}"</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col space-y-8 mt-6">

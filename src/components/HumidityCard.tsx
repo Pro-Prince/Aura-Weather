@@ -18,12 +18,17 @@ export function HumidityCard({ humidity }: HumidityCardProps) {
         <span className="type-card-title text-[14px] font-medium text-white">Humidity</span>
       </div>
 
-      <div className="flex-1 flex items-center justify-center relative my-2">
-        {/* Subtle decorative visual moisture level bar */}
-        <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden p-0.5 border border-white/5">
+      <div className="flex-1 flex items-center justify-center w-full relative my-2">
+        <div className="w-full relative py-2">
+          <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+            <div 
+              className="h-full rounded-full bg-gradient-to-r from-sky-500 via-sky-400 to-indigo-400 transition-all duration-700" 
+              style={{ width: `${Math.min(100, Math.max(0, humidity))}%` }}
+            />
+          </div>
           <div 
-            className="h-full rounded-full bg-gradient-to-r from-sky-400/50 to-sky-400 transition-all duration-700" 
-            style={{ width: `${Math.min(100, Math.max(0, humidity))}%` }}
+            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md border border-slate-200 transition-all duration-700"
+            style={{ left: `calc(${Math.min(100, Math.max(0, humidity))}% - 6px)` }}
           />
         </div>
       </div>

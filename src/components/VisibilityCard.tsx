@@ -46,7 +46,7 @@ export function VisibilityCard({ visibilityMeters }: VisibilityCardProps) {
         <span className="type-card-title text-[14px] font-medium text-white">Visibility</span>
       </div>
 
-      <div className="flex-1 flex items-center justify-center relative my-2">
+      <div className="flex-1 flex items-center justify-center w-full relative my-2">
         {/* Dynamic fan-shaped radar wedge graphic */}
         <div className="w-28 h-14 relative flex items-end justify-center">
           <svg className="w-full h-full overflow-visible" viewBox="0 0 120 54">

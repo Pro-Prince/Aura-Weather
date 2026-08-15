@@ -156,8 +156,10 @@ export async function getGeocoding(query: string, count = 10, signal?: AbortSign
     const res = await fetchWithTimeoutAndRetry(url, { signal });
     const data = await res.json();
     return data.results || [];
-  } catch (err) {
-    console.error('Geocoding error:', err);
+  } catch (err: any) {
+    if (err.name !== 'AbortError') {
+      console.error('Geocoding error:', err);
+    }
     throw err;
   }
 }
